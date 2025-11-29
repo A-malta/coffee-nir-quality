@@ -20,3 +20,9 @@ output/
 *.egg-info/
 build/
 dist/
+
+# Dados e Modelos (Ignorados para não pesar o repo)
+data/
+models/
+*.csv
+*.xlsx
