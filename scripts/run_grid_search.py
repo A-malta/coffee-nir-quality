@@ -40,26 +40,7 @@ def initialize_csv(filepath: str, headers: List[str]):
             writer = csv.writer(f)
             writer.writerow(headers)
 
-def train_evaluate_save(
-    params: Dict[str, Any],
-    keys: List[str],
-    X_train: pd.DataFrame,
-    y_train: pd.Series,
-    X_val: pd.DataFrame,
-    y_val: pd.Series,
-    csv_file: str,
-    preprocess_step: str
-):
-    model = RandomForestModel(params)
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_val)
-    
-    metrics = evaluate_model(y_val, y_pred)
-    
-    param_str = "_".join([f"{k}-{v}".replace("None", "NA") for k, v in params.items()])
-    model_filename = f"models/rf_{preprocess_step}_{param_str}.joblib"
-    model.save(model_filename)
-    
+def save_metrics(csv_file: str, preprocess_step: str, params: Dict[str, Any], keys: List[str], metrics: Dict[str, float], model_filename: str):
     with open(csv_file, mode='a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow([
@@ -71,6 +52,37 @@ def train_evaluate_save(
             metrics['specificity'],
             model_filename
         ])
+
+def train_evaluate_save(
+    params: Dict[str, Any],
+    keys: List[str],
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    X_val: pd.DataFrame,
+    y_val: pd.Series,
+    X_test: pd.DataFrame,
+    y_test: pd.Series,
+    csv_val: str,
+    csv_test: str,
+    preprocess_step: str
+):
+    model = RandomForestModel(params)
+    model.fit(X_train, y_train)
+    
+    # Validation
+    y_pred_val = model.predict(X_val)
+    metrics_val = evaluate_model(y_val, y_pred_val)
+    
+    # Test
+    y_pred_test = model.predict(X_test)
+    metrics_test = evaluate_model(y_test, y_pred_test)
+    
+    param_str = "_".join([f"{k}-{v}".replace("None", "NA") for k, v in params.items()])
+    model_filename = f"models/rf_{preprocess_step}_{param_str}.joblib"
+    model.save(model_filename)
+    
+    save_metrics(csv_val, preprocess_step, params, keys, metrics_val, model_filename)
+    save_metrics(csv_test, preprocess_step, params, keys, metrics_test, model_filename)
 
 def get_preprocess_files() -> List[str]:
     path = "data/processed/training"
@@ -99,8 +111,12 @@ def main():
     combinations = list(product(*param_grid.values()))
     
     os.makedirs("models", exist_ok=True)
-    csv_file = "resultados_grid_search.csv"
-    initialize_csv(csv_file, ["preprocess_step", *keys, "accuracy", "precision", "recall", "specificity", "model_file"])
+    csv_val = "resultados_grid_search_validacao.csv"
+    csv_test = "resultados_grid_search_teste.csv"
+    
+    headers = ["preprocess_step", *keys, "accuracy", "precision", "recall", "specificity", "model_file"]
+    initialize_csv(csv_val, headers)
+    initialize_csv(csv_test, headers)
 
     total_steps = len(preprocess_files) * len(combinations)
     print(f"Iniciando Grid Search: {len(preprocess_files)} pré-processamentos x {len(combinations)} combinações = {total_steps} modelos.")
@@ -110,10 +126,11 @@ def main():
         try:
             X_train, y_train = load_dataset("training", preprocess_step)
             X_val, y_val = load_dataset("validation", preprocess_step)
+            X_test, y_test = load_dataset("test", preprocess_step)
             
             for values in tqdm(combinations, ncols=100, desc=preprocess_step):
                 params = dict(zip(keys, values))
-                train_evaluate_save(params, keys, X_train, y_train, X_val, y_val, csv_file, preprocess_step)
+                train_evaluate_save(params, keys, X_train, y_train, X_val, y_val, X_test, y_test, csv_val, csv_test, preprocess_step)
                 
         except Exception as e:
             print(f"Erro ao processar {preprocess_step}: {e}")
