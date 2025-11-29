@@ -22,7 +22,7 @@ build/
 dist/
 
 # Dados e Modelos (Ignorados para não pesar o repo)
-data/
-models/
+/data/
+/models/
 *.csv
 *.xlsx
