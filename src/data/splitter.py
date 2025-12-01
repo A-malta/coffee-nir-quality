@@ -9,19 +9,22 @@ class DataSplitter:
 
     def split_indices(self, X: np.ndarray) -> Tuple[List[int], List[int], List[int]]:
         n_total = X.shape[0]
-        n_test_val = int(self.test_val_ratio * n_total)
         
-        idx_test_val = kennard_stone(X, n_test_val)
+
+        n_train = int((1 - self.test_val_ratio) * n_total)
+        idx_train = kennard_stone(X, n_train)
         
+
         all_indices = set(range(n_total))
-        idx_train = list(all_indices - set(idx_test_val))
+        remaining_indices = list(all_indices - set(idx_train))
+        X_remaining = X[remaining_indices]
         
-        X_test_val = X[idx_test_val]
-        n_val = int(self.val_ratio_relative * len(idx_test_val))
+
+        n_test = int(len(remaining_indices) * 0.5)
+        idx_test_relative = kennard_stone(X_remaining, n_test)
+        idx_test = [remaining_indices[i] for i in idx_test_relative]
         
-        idx_val_relative = kennard_stone(X_test_val, n_val)
-        
-        idx_val = [idx_test_val[i] for i in idx_val_relative]
-        idx_test = list(set(idx_test_val) - set(idx_val))
+
+        idx_val = list(set(remaining_indices) - set(idx_test))
         
         return idx_train, idx_test, idx_val
