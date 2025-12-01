@@ -69,11 +69,11 @@ def train_evaluate_save(
     model = RandomForestModel(params)
     model.fit(X_train, y_train)
     
-    # Validation
+
     y_pred_val = model.predict(X_val)
     metrics_val = evaluate_model(y_val, y_pred_val)
     
-    # Test
+
     y_pred_test = model.predict(X_test)
     metrics_test = evaluate_model(y_test, y_pred_test)
     
