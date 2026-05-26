@@ -113,6 +113,14 @@ pip install -r requirements.txt
 python main.py
 ```
 
+### Informando os arquivos via CLI
+
+Você também pode passar os dois arquivos de entrada explicitamente:
+
+```bash
+python main.py --spectra-file data/raw/RawSpectra_RoastedCoffee.xlsx --quality-file data/raw/SensoryQuality_RoastedCoffee.xlsx
+```
+
 ## Execução por etapa (opcional)
 
 Se quiser rodar manualmente:
@@ -122,4 +130,10 @@ python scripts/run_split.py
 python scripts/run_preprocessing.py
 python scripts/run_grid_search.py
 python scripts/run_validation.py
+```
+
+No split também é possível informar os arquivos:
+
+```bash
+python scripts/run_split.py --spectra-file data/raw/RawSpectra_RoastedCoffee.xlsx --quality-file data/raw/SensoryQuality_RoastedCoffee.xlsx
 ```
