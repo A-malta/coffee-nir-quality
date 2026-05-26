@@ -15,6 +15,14 @@ OUTPUT_FILENAME = "SG_Smoothing+1D+2D+MeanCentering.xlsx"
 
 
 def read_raw_spectra_excel(file_path: str) -> Tuple[np.ndarray, pd.DataFrame]:
+    """Lê arquivo de espectros e separa vetor de comprimentos de onda.
+
+    Args:
+        file_path: Caminho da planilha de espectros.
+
+    Returns:
+        Tupla com vetor de comprimentos de onda e DataFrame de espectros.
+    """
     df = pd.read_excel(file_path)
     wavelengths = df.iloc[:, 0].values
     spectra = df.iloc[:, 1:]
@@ -22,6 +30,17 @@ def read_raw_spectra_excel(file_path: str) -> Tuple[np.ndarray, pd.DataFrame]:
 
 
 def save_processed_spectra(wl: np.ndarray, result: pd.DataFrame, output_dir: Path, filename: str) -> None:
+    """Salva espectros processados em Excel com a coluna de número de onda.
+
+    Args:
+        wl: Vetor de número de onda/comprimento de onda.
+        result: DataFrame com espectros processados.
+        output_dir: Diretório de saída.
+        filename: Nome do arquivo de saída.
+
+    Returns:
+        None.
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
     out_path = output_dir / filename
     pd.concat([pd.Series(wl, name="Wavenumbers"), result], axis=1).to_excel(out_path, index=False)
@@ -29,6 +48,15 @@ def save_processed_spectra(wl: np.ndarray, result: pd.DataFrame, output_dir: Pat
 
 
 def apply_requested_pipeline(X: pd.DataFrame, wavelengths: np.ndarray) -> pd.DataFrame:
+    """Aplica sequência fixa de pré-processamento espectral.
+
+    Args:
+        X: DataFrame de espectros de entrada.
+        wavelengths: Eixo espectral para cálculo de derivadas.
+
+    Returns:
+        DataFrame após suavização e derivadas.
+    """
     X_processed = sg_smoothing(X, window_length=15, polyorder=2)
     X_processed = savitzky_derivative(
         X_processed,
@@ -48,6 +76,11 @@ def apply_requested_pipeline(X: pd.DataFrame, wavelengths: np.ndarray) -> pd.Dat
 
 
 def process_datasets() -> None:
+    """Processa treino, validação e teste e grava saídas pré-processadas.
+
+    Returns:
+        None.
+    """
     raw_dir = Path("data/raw_split")
     if not raw_dir.exists():
         print("Diretório data/raw_split não encontrado.")
@@ -78,6 +111,11 @@ def process_datasets() -> None:
 
 
 def main() -> None:
+    """Ponto de entrada do script de pré-processamento.
+
+    Returns:
+        None.
+    """
     process_datasets()
 
 
