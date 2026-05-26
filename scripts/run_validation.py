@@ -143,7 +143,7 @@ def main():
 
     if results:
         df_results = pd.DataFrame(results)
-        df_results = df_results.sort_values(by="test_r2", ascending=False)
+        df_results = df_results.sort_values(by="test_accuracy", ascending=False)
         df_results.to_csv("resultados_validacao_final.csv", index=False)
         print("Validação concluída. Resultados em 'resultados_validacao_final.csv'.")
     else:

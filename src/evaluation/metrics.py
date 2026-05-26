@@ -1,20 +1,44 @@
 import numpy as np
 import pandas as pd
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix
 from typing import Dict, Union
 
+
+def _specificity_multiclass(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """Calcula specificity média por classe (one-vs-rest)."""
+    cm = confusion_matrix(y_true, y_pred)
+    total = cm.sum()
+    specificities = []
+
+    for i in range(cm.shape[0]):
+        tp = cm[i, i]
+        fn = cm[i, :].sum() - tp
+        fp = cm[:, i].sum() - tp
+        tn = total - (tp + fn + fp)
+
+        denom = tn + fp
+        if denom > 0:
+            specificities.append(tn / denom)
+
+    return float(np.mean(specificities)) if specificities else 0.0
+
+
 def evaluate_model(y_true: Union[np.ndarray, pd.Series], y_pred: Union[np.ndarray, pd.Series]) -> Dict[str, float]:
-    """Retorna métricas principais de regressão em um dicionário.
+    """Retorna métricas de classificação em um dicionário.
 
     Args:
         y_true: Valores reais.
         y_pred: Valores preditos.
 
     Returns:
-        Dicionário com r2, rmse e mae.
+        Dicionário com accuracy, precision, recall e specificity.
     """
+    y_true_arr = np.asarray(y_true)
+    y_pred_arr = np.asarray(y_pred)
+
     return {
-        'r2': float(r2_score(y_true, y_pred)),
-        'rmse': float(np.sqrt(mean_squared_error(y_true, y_pred))),
-        'mae': float(mean_absolute_error(y_true, y_pred)),
+        'accuracy': float(accuracy_score(y_true_arr, y_pred_arr)),
+        'precision': float(precision_score(y_true_arr, y_pred_arr, average='weighted', zero_division=0)),
+        'recall': float(recall_score(y_true_arr, y_pred_arr, average='weighted', zero_division=0)),
+        'specificity': _specificity_multiclass(y_true_arr, y_pred_arr),
     }
