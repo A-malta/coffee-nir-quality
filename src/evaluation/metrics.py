@@ -4,6 +4,15 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, confu
 from typing import Dict, Union, List
 
 def calculate_specificity(y_true: Union[np.ndarray, pd.Series], y_pred: Union[np.ndarray, pd.Series]) -> float:
+    """Calcula especificidade para classificação binária ou multiclasse.
+
+    Args:
+        y_true: Classes reais.
+        y_pred: Classes preditas.
+
+    Returns:
+        Especificidade média (ou binária, quando aplicável).
+    """
     cm = confusion_matrix(y_true, y_pred)
     if cm.shape[0] == 2:
         tn, fp, fn, tp = cm.ravel()
@@ -17,6 +26,15 @@ def calculate_specificity(y_true: Union[np.ndarray, pd.Series], y_pred: Union[np
         return float(np.mean(specificities))
 
 def evaluate_model(y_true: Union[np.ndarray, pd.Series], y_pred: Union[np.ndarray, pd.Series]) -> Dict[str, float]:
+    """Retorna métricas principais de classificação em um dicionário.
+
+    Args:
+        y_true: Classes reais.
+        y_pred: Classes preditas.
+
+    Returns:
+        Dicionário com accuracy, precision, recall e specificity.
+    """
     return {
         'accuracy': float(accuracy_score(y_true, y_pred)),
         'precision': float(precision_score(y_true, y_pred, average='weighted', zero_division=0)),

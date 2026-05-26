@@ -9,6 +9,14 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.data.splitter import DataSplitter
 
 def load_spectra(file_path: Path) -> Tuple[pd.Series, pd.DataFrame, pd.DataFrame]:
+    """Carrega espectros crus e retorna vetor de onda e matriz espectral.
+
+    Args:
+        file_path: Caminho da planilha de espectros brutos.
+
+    Returns:
+        Tupla com vetor de comprimentos de onda e DataFrame de espectros.
+    """
     print(f"Lendo espectros de: {file_path}")
     df_spectra = pd.read_excel(file_path, sheet_name="RawSpectra_RoastedCoffee")
     wavelengths = df_spectra.iloc[:, 0]
@@ -16,12 +24,31 @@ def load_spectra(file_path: Path) -> Tuple[pd.Series, pd.DataFrame, pd.DataFrame
     return wavelengths, spectra
 
 def save_split_data(wavelengths: pd.Series, spectra: pd.DataFrame, indices: List[int], filename: str):
+    """Salva subconjunto de espectros selecionado por índices.
+
+    Args:
+        wavelengths: Série de comprimentos de onda.
+        spectra: DataFrame com todos os espectros.
+        indices: Índices das colunas/amostras a salvar.
+        filename: Nome do arquivo Excel de saída.
+
+    Returns:
+        None.
+    """
     cols = [spectra.columns[i] for i in indices]
     data = pd.concat([wavelengths, spectra[cols]], axis=1)
     data.to_excel(f"data/raw_split/{filename}", index=False)
     print(f"Salvo: data/raw_split/{filename}")
 
 def process_spectra_split(file_path: Path) -> Tuple[List[str], List[str], List[str]]:
+    """Executa split Kennard-Stone e salva espectros de treino/teste/validação.
+
+    Args:
+        file_path: Caminho do arquivo de espectros brutos.
+
+    Returns:
+        Tupla com listas de IDs de amostras para treino, teste e validação.
+    """
     wavelengths, spectra = load_spectra(file_path)
     X = spectra.T.values
     
@@ -39,10 +66,32 @@ def process_spectra_split(file_path: Path) -> Tuple[List[str], List[str], List[s
     return [all_cols[i] for i in idx_train], [all_cols[i] for i in idx_test], [all_cols[i] for i in idx_val]
 
 def filter_and_save_quality(df_quality: pd.DataFrame, cols: List[str], filename: str, code_col: str):
+    """Filtra planilha de qualidade pelas amostras selecionadas e salva.
+
+    Args:
+        df_quality: DataFrame com dados de qualidade sensorial.
+        cols: IDs das amostras a manter.
+        filename: Nome do arquivo de saída.
+        code_col: Nome da coluna identificadora das amostras.
+
+    Returns:
+        None.
+    """
     subset = df_quality[df_quality[code_col].isin(cols)]
     subset.to_excel(f"data/raw_split/{filename}", index=False)
 
 def process_quality_split(file_path: Path, train_cols: List[str], test_cols: List[str], val_cols: List[str]):
+    """Gera arquivos de qualidade alinhados com os splits espectrais.
+
+    Args:
+        file_path: Caminho da planilha de qualidade.
+        train_cols: IDs de amostras de treino.
+        test_cols: IDs de amostras de teste.
+        val_cols: IDs de amostras de validação.
+
+    Returns:
+        None.
+    """
     print(f"Lendo qualidade de: {file_path}")
     df_quality = pd.read_excel(file_path, sheet_name="Cup quality_RoastedCoffee")
     df_quality.columns = df_quality.columns.str.strip() 
@@ -53,6 +102,11 @@ def process_quality_split(file_path: Path, train_cols: List[str], test_cols: Lis
     filter_and_save_quality(df_quality, val_cols, "validation_quality.xlsx", code_col)
 
 def main():
+    """Executa o fluxo principal do script.
+
+    Returns:
+        None.
+    """
     base_path = Path("data/raw")
     spectra_file = base_path / "RawSpectra_RoastedCoffee.xlsx"
     quality_file = base_path / "SensoryQuality_RoastedCoffee.xlsx"

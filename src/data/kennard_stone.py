@@ -4,6 +4,15 @@ from scipy.spatial.distance import cdist
 from typing import List
 
 def kennard_stone(X: np.ndarray, n_samples: int) -> List[int]:
+    """Seleciona amostras representativas pelo algoritmo Kennard-Stone.
+
+    Args:
+        X: Matriz de amostras por atributos.
+        n_samples: Quantidade de índices a selecionar.
+
+    Returns:
+        Lista de índices selecionados.
+    """
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     dist_matrix = cdist(X_scaled, X_scaled)

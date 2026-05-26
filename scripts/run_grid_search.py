@@ -14,6 +14,18 @@ from src.models.random_forest import RandomForestModel
 from src.evaluation.metrics import evaluate_model
 
 def load_dataset(type_data: str, preprocess_step: str) -> Tuple[pd.DataFrame, pd.Series]:
+    """Carrega features processadas e labels para o split informado.
+
+    Args:
+        type_data: Nome do split (training, validation ou test).
+        preprocess_step: Nome-base do arquivo de pré-processamento.
+
+    Returns:
+        Tupla contendo ``X`` transposto para amostras em linhas e ``y`` alinhado.
+
+    Raises:
+        KeyError: Se a coluna de target não puder ser identificada.
+    """
     x_path = f"data/processed/{type_data}/{preprocess_step}.xlsx"
     y_path = f"data/raw_split/{type_data}_quality.xlsx"
     
@@ -35,12 +47,34 @@ def load_dataset(type_data: str, preprocess_step: str) -> Tuple[pd.DataFrame, pd
     return X.iloc[:min_size], y.iloc[:min_size]
 
 def initialize_csv(filepath: str, headers: List[str]):
+    """Cria arquivo CSV com cabeçalho caso ainda não exista.
+
+    Args:
+        filepath: Caminho do arquivo CSV.
+        headers: Lista de colunas do cabeçalho.
+
+    Returns:
+        None.
+    """
     if not os.path.exists(filepath):
         with open(filepath, mode='w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerow(headers)
 
 def save_metrics(csv_file: str, preprocess_step: str, params: Dict[str, Any], keys: List[str], metrics: Dict[str, float], model_filename: str):
+    """Acrescenta uma linha com métricas e hiperparâmetros no CSV.
+
+    Args:
+        csv_file: Arquivo CSV de destino.
+        preprocess_step: Identificador do pré-processamento.
+        params: Dicionário de hiperparâmetros do modelo.
+        keys: Ordem das chaves a persistir no CSV.
+        metrics: Métricas calculadas para o split.
+        model_filename: Caminho do modelo salvo.
+
+    Returns:
+        None.
+    """
     with open(csv_file, mode='a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow([
@@ -66,6 +100,24 @@ def train_evaluate_save(
     csv_test: str,
     preprocess_step: str
 ):
+    """Treina, avalia, salva modelo e registra métricas de uma combinação.
+
+    Args:
+        params: Hiperparâmetros da Random Forest.
+        keys: Ordem das chaves de hiperparâmetros para persistência.
+        X_train: Features de treino.
+        y_train: Labels de treino.
+        X_val: Features de validação.
+        y_val: Labels de validação.
+        X_test: Features de teste.
+        y_test: Labels de teste.
+        csv_val: Caminho do CSV de validação.
+        csv_test: Caminho do CSV de teste.
+        preprocess_step: Identificador do pré-processamento.
+
+    Returns:
+        None.
+    """
     model = RandomForestModel(params)
     model.fit(X_train, y_train)
     
@@ -85,6 +137,11 @@ def train_evaluate_save(
     save_metrics(csv_test, preprocess_step, params, keys, metrics_test, model_filename)
 
 def get_preprocess_files() -> List[str]:
+    """Lista nomes-base dos arquivos de pré-processamento disponíveis.
+
+    Returns:
+        Lista de nomes-base dos arquivos ``.xlsx`` em ``data/processed/training``.
+    """
     path = "data/processed/training"
     if not os.path.exists(path):
         return []
@@ -92,6 +149,11 @@ def get_preprocess_files() -> List[str]:
     return [os.path.splitext(os.path.basename(f))[0] for f in sorted(files)]
 
 def main():
+    """Executa o fluxo de grid search para todos os pré-processamentos.
+
+    Returns:
+        None.
+    """
     preprocess_files = get_preprocess_files()
     
     if not preprocess_files:

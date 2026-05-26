@@ -10,6 +10,20 @@ except ImportError:
     spsolve = None
 
 def baseline_asls(X: pd.DataFrame, lam: float, p: float, niter: int) -> pd.DataFrame:
+    """Remove baseline espectral usando Asymmetric Least Squares (AsLS).
+
+    Args:
+        X: DataFrame com espectros nas colunas.
+        lam: Fator de suavização da penalização de curvatura.
+        p: Peso de assimetria aplicado ao ajuste iterativo.
+        niter: Número de iterações do algoritmo.
+
+    Returns:
+        DataFrame com o baseline removido para cada espectro.
+
+    Raises:
+        ImportError: Se ``scipy`` não estiver disponível.
+    """
     if sparse is None or spsolve is None:
         raise ImportError("A biblioteca 'scipy' é necessária para esta função.")
 

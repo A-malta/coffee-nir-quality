@@ -3,6 +3,15 @@ import numpy as np
 from typing import Iterable, Optional, Dict
 
 def area_normalization(X: pd.DataFrame, wavelengths: Iterable[float]) -> pd.DataFrame:
+    """Normaliza cada espectro pela área sob a curva.
+
+    Args:
+        X: DataFrame com espectros.
+        wavelengths: Eixo espectral usado na integração.
+
+    Returns:
+        DataFrame normalizado por área.
+    """
     wl = np.asarray(list(wavelengths), dtype=float)
     result = {}
     for col in X.columns:
@@ -11,6 +20,15 @@ def area_normalization(X: pd.DataFrame, wavelengths: Iterable[float]) -> pd.Data
     return pd.DataFrame(result, index=X.index)
 
 def msc(X: pd.DataFrame, ref: Optional[pd.Series] = None) -> pd.DataFrame:
+    """Aplica Multiplicative Scatter Correction (MSC).
+
+    Args:
+        X: DataFrame com espectros.
+        ref: Espectro de referência; se ``None``, usa média linha a linha.
+
+    Returns:
+        DataFrame corrigido por espalhamento multiplicativo.
+    """
     ref_vec = (X.mean(axis=1) if ref is None else ref).to_numpy().reshape(-1, 1)
     A = np.hstack([np.ones_like(ref_vec), ref_vec])
     
@@ -27,6 +45,15 @@ def msc(X: pd.DataFrame, ref: Optional[pd.Series] = None) -> pd.DataFrame:
     return pd.DataFrame(corrected, index=X.index)
 
 def isc_iterative_msc(X: pd.DataFrame, iters: int = 2) -> pd.DataFrame:
+    """Executa MSC iterativo atualizando referência a cada iteração.
+
+    Args:
+        X: DataFrame com espectros.
+        iters: Quantidade de iterações de correção.
+
+    Returns:
+        DataFrame corrigido após iterações de MSC.
+    """
     result = X.copy()
     ref = result.mean(axis=1)
     for _ in range(max(1, iters)):
@@ -35,6 +62,17 @@ def isc_iterative_msc(X: pd.DataFrame, iters: int = 2) -> pd.DataFrame:
     return result
 
 def emsc(X: pd.DataFrame, wavelengths: Iterable[float], ref: Optional[pd.Series] = None, poly_order: int = 2) -> pd.DataFrame:
+    """Aplica Extended MSC com tendência polinomial de baseline.
+
+    Args:
+        X: DataFrame com espectros.
+        wavelengths: Eixo espectral dos dados.
+        ref: Espectro de referência; se ``None``, usa média linha a linha.
+        poly_order: Ordem do termo polinomial do baseline.
+
+    Returns:
+        DataFrame corrigido por EMSC.
+    """
     wl = np.asarray(list(wavelengths), dtype=float)
     x = (wl - wl.min()) / (wl.max() - wl.min())
     
