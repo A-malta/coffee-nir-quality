@@ -1,5 +1,6 @@
 import sys
 import os
+import argparse
 import pandas as pd
 from pathlib import Path
 from typing import List, Tuple
@@ -101,19 +102,39 @@ def process_quality_split(file_path: Path, train_cols: List[str], test_cols: Lis
     filter_and_save_quality(df_quality, test_cols, "test_quality.xlsx", code_col)
     filter_and_save_quality(df_quality, val_cols, "validation_quality.xlsx", code_col)
 
+def parse_args() -> argparse.Namespace:
+    """Define e lê argumentos CLI do split."""
+    parser = argparse.ArgumentParser(description="Executa split de dados brutos do café torrado.")
+    parser.add_argument(
+        "--spectra-file",
+        type=Path,
+        default=Path("data/raw/RawSpectra_RoastedCoffee.xlsx"),
+        help="Caminho para RawSpectra_RoastedCoffee.xlsx",
+    )
+    parser.add_argument(
+        "--quality-file",
+        type=Path,
+        default=Path("data/raw/SensoryQuality_RoastedCoffee.xlsx"),
+        help="Caminho para SensoryQuality_RoastedCoffee.xlsx",
+    )
+    return parser.parse_args()
+
 def main():
     """Executa o fluxo principal do script.
 
     Returns:
         None.
     """
-    base_path = Path("data/raw")
-    spectra_file = base_path / "RawSpectra_RoastedCoffee.xlsx"
-    quality_file = base_path / "SensoryQuality_RoastedCoffee.xlsx"
-    
+    args = parse_args()
+    spectra_file = args.spectra_file
+    quality_file = args.quality_file
+
     if not spectra_file.exists():
         print(f"Erro: Arquivo não encontrado: {spectra_file}")
-        print(f"Por favor, coloque os arquivos originais em '{base_path.absolute()}'")
+        return
+
+    if not quality_file.exists():
+        print(f"Erro: Arquivo não encontrado: {quality_file}")
         return
 
     print("Iniciando processamento Kennard-Stone 80/10/10...")
