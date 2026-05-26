@@ -51,16 +51,26 @@ def load_dataset(type_data: str, preprocess_step: str) -> Tuple[pd.DataFrame, pd
 def extract_preprocess_step(model_filename: str) -> Optional[str]:
     """Extrai identificador de pré-processamento do nome do arquivo do modelo.
 
+    Suporta nomes no formato gerado por ``run_grid_search.py``:
+    ``rf_<preprocess_step>_n_estimators-... .joblib``.
+
     Args:
         model_filename: Nome do arquivo ``.joblib`` do modelo.
 
     Returns:
         String do pré-processamento ou ``None`` se não houver correspondência.
     """
-    match = re.search(r"rf_(\d{3}_.+?)_n_estimators", model_filename)
-    if match:
-        return match.group(1)
-    return None
+    base_name = os.path.splitext(os.path.basename(model_filename))[0]
+    if not base_name.startswith("rf_"):
+        return None
+
+    marker = "_n_estimators-"
+    marker_index = base_name.find(marker)
+    if marker_index == -1:
+        return None
+
+    preprocess_step = base_name[len("rf_"):marker_index]
+    return preprocess_step or None
 
 def evaluate_single_model(model_path: str) -> Optional[Dict[str, Any]]:
     """Avalia um modelo salvo em validação e teste e retorna métricas.
