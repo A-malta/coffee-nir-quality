@@ -7,6 +7,15 @@ from scripts.run_grid_search import main as run_grid_search
 from scripts.run_validation import main as run_validation
 
 def run_step(step_name: str, step_func: Callable[[], None]) -> bool:
+    """Executa uma etapa do pipeline e retorna se ela concluiu com sucesso.
+
+    Args:
+        step_name: Nome descritivo da etapa para logs.
+        step_func: Função sem argumentos que executa a etapa.
+
+    Returns:
+        True quando a etapa termina sem exceção; caso contrário, False.
+    """
     print(f"\n>>> ETAPA: {step_name}")
     try:
         step_func()
@@ -16,6 +25,11 @@ def run_step(step_name: str, step_func: Callable[[], None]) -> bool:
         return False
 
 def main():
+    """Executa o fluxo principal do script.
+
+    Returns:
+        None.
+    """
     print("=" * 50)
     print("   INICIANDO PIPELINE COFFEE-NIR-QUALITY")
     print("=" * 50)

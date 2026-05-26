@@ -4,10 +4,24 @@ from .kennard_stone import kennard_stone
 
 class DataSplitter:
     def __init__(self, test_val_ratio: float = 0.2, val_ratio_relative: float = 0.5):
+        """Inicializa proporções de divisão entre treino, teste e validação.
+
+        Args:
+            test_val_ratio: Fração reservada para teste+validação.
+            val_ratio_relative: Fração de validação dentro do conjunto remanescente.
+        """
         self.test_val_ratio = test_val_ratio
         self.val_ratio_relative = val_ratio_relative
 
     def split_indices(self, X: np.ndarray) -> Tuple[List[int], List[int], List[int]]:
+        """Divide índices em treino, teste e validação com Kennard-Stone.
+
+        Args:
+            X: Matriz de amostras por atributos.
+
+        Returns:
+            Tupla com listas de índices de treino, teste e validação.
+        """
         n_total = X.shape[0]
         
 

@@ -12,6 +12,19 @@ from src.models.random_forest import RandomForestModel
 from src.evaluation.metrics import evaluate_model
 
 def load_dataset(type_data: str, preprocess_step: str) -> Tuple[pd.DataFrame, pd.Series]:
+    """Carrega atributos processados e rótulos para um split específico.
+
+    Args:
+        type_data: Nome do split (training, validation ou test).
+        preprocess_step: Nome-base do arquivo de pré-processamento.
+
+    Returns:
+        Tupla ``(X, y)`` com amostras alinhadas.
+
+    Raises:
+        FileNotFoundError: Se o arquivo de atributos não existir.
+        KeyError: Se a coluna de target não puder ser inferida.
+    """
     x_path = f"data/processed/{type_data}/{preprocess_step}.xlsx"
     y_path = f"data/raw_split/{type_data}_quality.xlsx"
     
@@ -36,12 +49,28 @@ def load_dataset(type_data: str, preprocess_step: str) -> Tuple[pd.DataFrame, pd
     return X.iloc[:min_size], y.iloc[:min_size]
 
 def extract_preprocess_step(model_filename: str) -> Optional[str]:
+    """Extrai identificador de pré-processamento do nome do arquivo do modelo.
+
+    Args:
+        model_filename: Nome do arquivo ``.joblib`` do modelo.
+
+    Returns:
+        String do pré-processamento ou ``None`` se não houver correspondência.
+    """
     match = re.search(r"rf_(\d{3}_.+?)_n_estimators", model_filename)
     if match:
         return match.group(1)
     return None
 
 def evaluate_single_model(model_path: str) -> Optional[Dict[str, Any]]:
+    """Avalia um modelo salvo em validação e teste e retorna métricas.
+
+    Args:
+        model_path: Caminho completo do modelo salvo.
+
+    Returns:
+        Dicionário com métricas por split ou ``None`` em caso de erro/incompatibilidade.
+    """
     try:
         filename = os.path.basename(model_path)
         
@@ -82,6 +111,11 @@ def evaluate_single_model(model_path: str) -> Optional[Dict[str, Any]]:
         return None
 
 def main():
+    """Executa o fluxo principal do script.
+
+    Returns:
+        None.
+    """
     models_dir = "models"
     model_files = glob.glob(os.path.join(models_dir, "*.joblib"))
     
