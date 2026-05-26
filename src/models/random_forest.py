@@ -1,4 +1,4 @@
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier
 from typing import Dict, Any, Optional
 import joblib
 import os
@@ -13,7 +13,7 @@ class RandomForestModel:
         """
         self.params = params or {}
         self.random_state = random_state
-        self.model = RandomForestRegressor(**self.params, random_state=self.random_state)
+        self.model = RandomForestClassifier(**self.params, random_state=self.random_state)
 
     def fit(self, X, y):
         """Treina o modelo com atributos ``X`` e rótulos ``y``.
