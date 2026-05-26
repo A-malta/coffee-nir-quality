@@ -80,9 +80,10 @@ def save_metrics(csv_file: str, preprocess_step: str, params: Dict[str, Any], ke
         writer.writerow([
             preprocess_step,
             *[params[k] for k in keys],
-            metrics['r2'],
-            metrics['rmse'],
-            metrics['mae'],
+            metrics['accuracy'],
+            metrics['precision'],
+            metrics['recall'],
+            metrics['specificity'],
             model_filename
         ])
 
@@ -175,7 +176,7 @@ def main():
     csv_val = "resultados_grid_search_validacao.csv"
     csv_test = "resultados_grid_search_teste.csv"
     
-    headers = ["preprocess_step", *keys, "r2", "rmse", "mae", "model_file"]
+    headers = ["preprocess_step", *keys, "accuracy", "precision", "recall", "specificity", "model_file"]
     initialize_csv(csv_val, headers)
     initialize_csv(csv_test, headers)
 
