@@ -1,43 +1,20 @@
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix
-from typing import Dict, Union, List
-
-def calculate_specificity(y_true: Union[np.ndarray, pd.Series], y_pred: Union[np.ndarray, pd.Series]) -> float:
-    """Calcula especificidade para classificação binária ou multiclasse.
-
-    Args:
-        y_true: Classes reais.
-        y_pred: Classes preditas.
-
-    Returns:
-        Especificidade média (ou binária, quando aplicável).
-    """
-    cm = confusion_matrix(y_true, y_pred)
-    if cm.shape[0] == 2:
-        tn, fp, fn, tp = cm.ravel()
-        return float(tn / (tn + fp)) if (tn + fp) > 0 else 0.0
-    else:
-        specificities = []
-        for i in range(cm.shape[0]):
-            tn = np.sum(np.delete(np.delete(cm, i, axis=0), i, axis=1))
-            fp = np.sum(cm[:, i]) - cm[i, i]
-            specificities.append(tn / (tn + fp) if (tn + fp) > 0 else 0.0)
-        return float(np.mean(specificities))
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from typing import Dict, Union
 
 def evaluate_model(y_true: Union[np.ndarray, pd.Series], y_pred: Union[np.ndarray, pd.Series]) -> Dict[str, float]:
-    """Retorna métricas principais de classificação em um dicionário.
+    """Retorna métricas principais de regressão em um dicionário.
 
     Args:
-        y_true: Classes reais.
-        y_pred: Classes preditas.
+        y_true: Valores reais.
+        y_pred: Valores preditos.
 
     Returns:
-        Dicionário com accuracy, precision, recall e specificity.
+        Dicionário com r2, rmse e mae.
     """
     return {
-        'accuracy': float(accuracy_score(y_true, y_pred)),
-        'precision': float(precision_score(y_true, y_pred, average='weighted', zero_division=0)),
-        'recall': float(recall_score(y_true, y_pred, average='weighted', zero_division=0)),
-        'specificity': calculate_specificity(y_true, y_pred)
+        'r2': float(r2_score(y_true, y_pred)),
+        'rmse': float(np.sqrt(mean_squared_error(y_true, y_pred))),
+        'mae': float(mean_absolute_error(y_true, y_pred)),
     }
