@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix
-from typing import Dict, Union
+from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score
+from typing import Union
 
 
 def _specificity_multiclass(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    """Calcula specificity média por classe (one-vs-rest)."""
+    """Calculate mean one-vs-rest specificity across classes."""
     cm = confusion_matrix(y_true, y_pred)
     total = cm.sum()
     specificities = []
@@ -23,22 +23,22 @@ def _specificity_multiclass(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return float(np.mean(specificities)) if specificities else 0.0
 
 
-def evaluate_model(y_true: Union[np.ndarray, pd.Series], y_pred: Union[np.ndarray, pd.Series]) -> Dict[str, float]:
-    """Retorna métricas de classificação em um dicionário.
+def evaluate_model(y_true: Union[np.ndarray, pd.Series], y_pred: Union[np.ndarray, pd.Series]) -> dict[str, float]:
+    """Calculate classification metrics used by the pipeline.
 
     Args:
-        y_true: Valores reais.
-        y_pred: Valores preditos.
+        y_true: Ground-truth labels.
+        y_pred: Predicted labels.
 
     Returns:
-        Dicionário com accuracy, precision, recall e specificity.
+        Dictionary with accuracy, weighted precision, weighted recall and specificity.
     """
     y_true_arr = np.asarray(y_true)
     y_pred_arr = np.asarray(y_pred)
 
     return {
-        'accuracy': float(accuracy_score(y_true_arr, y_pred_arr)),
-        'precision': float(precision_score(y_true_arr, y_pred_arr, average='weighted', zero_division=0)),
-        'recall': float(recall_score(y_true_arr, y_pred_arr, average='weighted', zero_division=0)),
-        'specificity': _specificity_multiclass(y_true_arr, y_pred_arr),
+        "accuracy": float(accuracy_score(y_true_arr, y_pred_arr)),
+        "precision": float(precision_score(y_true_arr, y_pred_arr, average="weighted", zero_division=0)),
+        "recall": float(recall_score(y_true_arr, y_pred_arr, average="weighted", zero_division=0)),
+        "specificity": _specificity_multiclass(y_true_arr, y_pred_arr),
     }

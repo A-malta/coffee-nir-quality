@@ -1,139 +1,86 @@
 # Coffee NIR Quality Pipeline
 
-Este repositório executa um pipeline completo para **classificação da qualidade sensorial de café torrado** a partir de espectros NIR.
+Pipeline para classificar a qualidade sensorial de café torrado a partir de espectros NIR.
 
-## O que o pipeline faz (passo a passo)
+## Etapas
 
-Ao executar `python main.py`, o projeto roda **4 etapas sequenciais**:
+Ao executar `python main.py`, o projeto roda três etapas:
 
-1. **Divisão de dados (`scripts/run_split.py`)**
-   - Lê os arquivos brutos em `data/raw/`:
-     - `RawSpectra_RoastedCoffee.xlsx` (espectros)
-     - `SensoryQuality_RoastedCoffee.xlsx` (qualidade sensorial)
-   - Aplica o algoritmo **Kennard-Stone** para selecionar amostras representativas.
-   - Cria a divisão aproximada **80/10/10** em:
-     - treino (`training`)
-     - teste (`test`)
-     - validação (`validation`)
-   - Salva os arquivos em `data/raw_split/`:
-     - `training_spectra.xlsx`, `test_spectra.xlsx`, `validation_spectra.xlsx`
-     - `training_quality.xlsx`, `test_quality.xlsx`, `validation_quality.xlsx`
+1. **Split treino/validação (`scripts/run_split.py`)**
+   - Lê espectros e qualidade sensorial.
+   - Alinha as classes da coluna `Class` às amostras espectrais.
+   - Separa aproximadamente 80% para treino e 20% para validação.
+   - Mantém a validação estratificada por classe.
+   - Seleciona amostras representativas dentro de cada classe com Kennard-Stone.
+   - Salva:
+     - `data/raw_split/training_spectra.xlsx`
+     - `data/raw_split/validation_spectra.xlsx`
+     - `data/raw_split/training_quality.xlsx`
+     - `data/raw_split/validation_quality.xlsx`
 
-2. **Pré-processamento espectral (`scripts/run_preprocessing.py`)**
-   - Lê os espectros de `data/raw_split/`.
-   - Aplica, nesta ordem:
-     1) **Savitzky-Golay smoothing**  
-     2) **1ª derivada** (Savitzky-Golay)  
-     3) **2ª derivada** (Savitzky-Golay)  
-     4) **Mean centering** usando média calculada no conjunto de treino
-   - Gera 3 arquivos processados (treino/validação/teste) em:
+2. **Pré-processamento (`scripts/run_preprocessing.py`)**
+   - Aplica Savitzky-Golay smoothing.
+   - Calcula 1ª e 2ª derivadas por Savitzky-Golay.
+   - Aplica mean centering usando a média do treino.
+   - Salva os arquivos processados em:
      - `data/processed/training/`
      - `data/processed/validation/`
-     - `data/processed/test/`
-   - Nome do arquivo gerado:
-     - `SG_Smoothing+1D+2D+MeanCentering.xlsx`
 
-3. **Treinamento + busca de hiperparâmetros (`scripts/run_grid_search.py`)**
-   - Para cada arquivo de pré-processamento disponível em `data/processed/training/`, executa grid search de `RandomForestClassifier`.
-   - Grade atual:
-     - `n_estimators`: 50, 100, 200, 300
-     - `max_depth`: 5, 10, 20
-     - `min_samples_split`: 2, 5
-     - `min_samples_leaf`: 1, 2
-     - `max_features`: None
-     - `bootstrap`: True, False
-   - Para cada combinação:
-     - treina com treino
-     - avalia em validação e teste
-     - salva o modelo em `models/*.joblib`
-     - registra métricas em CSV:
-       - `resultados_grid_search_validacao.csv`
-       - `resultados_grid_search_teste.csv`
+3. **Grid search (`scripts/run_grid_search.py`)**
+   - Treina `RandomForestClassifier` em cada combinação de hiperparâmetros.
+   - Usa GPU via cuML quando CUDA está disponível.
+   - Usa scikit-learn como fallback em CPU.
+   - Avalia cada modelo no conjunto de validação.
+   - Salva:
+     - modelos em `models/*.joblib`
+     - métricas em `resultados_grid_search_validacao.csv`
 
-4. **Validação final dos modelos (`scripts/run_validation.py`)**
-   - Lê todos os modelos em `models/*.joblib`.
-   - Identifica o pré-processamento pelo nome do arquivo do modelo.
-   - Reavalia cada modelo nos conjuntos de **teste** e **validação**.
-   - Calcula métricas:
-     - `accuracy`
-     - `precision` (weighted)
-     - `recall` (weighted)
-     - `specificity` (com suporte para binário e multiclasse)
-   - Salva o consolidado em:
-     - `resultados_validacao_final.csv`
+## Execução
 
----
-
-## Fluxo de execução
-
-```text
-data/raw
-  ├─ RawSpectra_RoastedCoffee.xlsx
-  └─ SensoryQuality_RoastedCoffee.xlsx
-        │
-        ▼
-run_split.py
-        │
-        ▼
-data/raw_split (treino/teste/validação)
-        │
-        ▼
-run_preprocessing.py
-        │
-        ▼
-data/processed (treino/teste/validação)
-        │
-        ▼
-run_grid_search.py
-        │
-        ├─ models/*.joblib
-        ├─ resultados_grid_search_validacao.csv
-        └─ resultados_grid_search_teste.csv
-        │
-        ▼
-run_validation.py
-        │
-        ▼
-resultados_validacao_final.csv
-```
-
-## Como executar
-
-1. Instale dependências:
+Instale as dependências:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Garanta que os dados brutos estejam em `data/raw/` com os nomes esperados.
-
-3. Execute o pipeline completo:
+Execute com os caminhos padrão:
 
 ```bash
 python main.py
 ```
 
-### Informando os arquivos via CLI
-
-Você também pode passar os dois arquivos de entrada explicitamente:
+Ou informe os arquivos manualmente:
 
 ```bash
-python main.py --spectra-file data/raw/RawSpectra_RoastedCoffee.xlsx --quality-file data/raw/SensoryQuality_RoastedCoffee.xlsx
+python main.py \
+  --spectra-file data/RawSpectra_RoastedCoffee.xlsx \
+  --quality-file data/SensoryQuality_RoastedCoffee.xlsx
 ```
 
-## Execução por etapa (opcional)
-
-Se quiser rodar manualmente:
+## Execução por etapa
 
 ```bash
 python scripts/run_split.py
 python scripts/run_preprocessing.py
 python scripts/run_grid_search.py
+```
+
+O utilitário abaixo reavalia modelos salvos na validação e gera um consolidado ordenado:
+
+```bash
 python scripts/run_validation.py
 ```
 
-No split também é possível informar os arquivos:
+## Backend da Random Forest
+
+Por padrão, o backend é escolhido automaticamente:
+
+- `cuml`, quando há GPU CUDA disponível.
+- `sklearn`, quando não há GPU acessível.
+
+Para forçar um backend:
 
 ```bash
-python scripts/run_split.py --spectra-file data/raw/RawSpectra_RoastedCoffee.xlsx --quality-file data/raw/SensoryQuality_RoastedCoffee.xlsx
+COFFEE_NIR_RF_BACKEND=gpu python main.py
+COFFEE_NIR_RF_BACKEND=cpu python main.py
 ```

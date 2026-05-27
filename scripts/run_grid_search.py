@@ -1,203 +1,84 @@
-import sys
-import os
-import pandas as pd
-from itertools import product
-from tqdm import tqdm
 import csv
-from typing import List, Dict, Any, Tuple
-import glob
+import os
+import sys
+from itertools import product
+from pathlib import Path
+from typing import Any
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import numpy as np
+import pandas as pd
 
-from src.data.loader import load_excel_data
-from src.models.random_forest import RandomForestModel
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from src.data.loader import infer_class_target_column, load_excel_data
 from src.evaluation.metrics import evaluate_model
+from src.models.random_forest import RandomForestModel
 
-def load_dataset(type_data: str, preprocess_step: str) -> Tuple[pd.DataFrame, pd.Series]:
-    """Carrega features processadas e labels para o split informado.
 
-    Args:
-        type_data: Nome do split (training, validation ou test).
-        preprocess_step: Nome-base do arquivo de pré-processamento.
+PROCESSED = Path("data/processed")
+RAW_SPLIT = Path("data/raw_split")
+MODELS = Path("models")
+RESULTS = Path("resultados_grid_search_validacao.csv")
+METRICS = ("accuracy", "precision", "recall", "specificity")
 
-    Returns:
-        Tupla contendo ``X`` transposto para amostras em linhas e ``y`` alinhado.
+PARAM_GRID: dict[str, list[Any]] = {
+    "n_estimators": [300, 500, 800],
+    "max_depth": [5, 20, None],
+    "min_samples_split": [2, 15],
+    "min_samples_leaf": [1, 5, 10],
+    "max_features": [None, "sqrt", 0.5, "log2"],
+    "bootstrap": [True],
+}
 
-    Raises:
-        KeyError: Se a coluna de target não puder ser identificada.
-    """
-    x_path = f"data/processed/{type_data}/{preprocess_step}.xlsx"
-    y_path = f"data/raw_split/{type_data}_quality.xlsx"
-    
-    X_raw = load_excel_data(x_path)
-    y_raw = load_excel_data(y_path)
-    
-    X = X_raw.iloc[:, 1:].T
-    
-    target_col = 'label'
-    if target_col not in y_raw.columns:
-        if len(y_raw.columns) > 1:
-            target_col = y_raw.columns[1]
-        else:
-            raise KeyError("Não foi possível identificar a coluna de target (label).")
-            
-    y = y_raw[target_col]
-    
-    min_size = min(X.shape[0], len(y))
-    return X.iloc[:min_size], y.iloc[:min_size]
 
-def initialize_csv(filepath: str, headers: List[str]):
-    """Cria arquivo CSV com cabeçalho caso ainda não exista.
+def load_dataset(split: str, preprocess: str) -> tuple[pd.DataFrame, pd.Series]:
+    X_raw = load_excel_data(str(PROCESSED / split / f"{preprocess}.xlsx"))
+    y_raw = load_excel_data(str(RAW_SPLIT / f"{split}_quality.xlsx"))
+    X = X_raw.iloc[:, 1:].T.astype(np.float32, copy=False)
+    y = y_raw[infer_class_target_column(y_raw)]
+    n = min(len(X), len(y))
+    return X.iloc[:n], y.iloc[:n]
 
-    Args:
-        filepath: Caminho do arquivo CSV.
-        headers: Lista de colunas do cabeçalho.
 
-    Returns:
-        None.
-    """
-    if not os.path.exists(filepath):
-        with open(filepath, mode='w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(headers)
+def model_path(preprocess: str, params: dict[str, Any]) -> Path:
+    slug = "_".join(f"{k}-{str(v).replace('None', 'NA')}" for k, v in params.items())
+    return MODELS / f"rf_{preprocess}_{slug}.joblib"
 
-def save_metrics(csv_file: str, preprocess_step: str, params: Dict[str, Any], keys: List[str], metrics: Dict[str, float], model_filename: str):
-    """Acrescenta uma linha com métricas e hiperparâmetros no CSV.
 
-    Args:
-        csv_file: Arquivo CSV de destino.
-        preprocess_step: Identificador do pré-processamento.
-        params: Dicionário de hiperparâmetros do modelo.
-        keys: Ordem das chaves a persistir no CSV.
-        metrics: Métricas calculadas para o split.
-        model_filename: Caminho do modelo salvo.
+def write_header(keys: list[str]) -> None:
+    with RESULTS.open("w", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerow(["preprocess_step", *keys, *METRICS, "model_file"])
 
-    Returns:
-        None.
-    """
-    with open(csv_file, mode='a', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow([
-            preprocess_step,
-            *[params[k] for k in keys],
-            metrics['accuracy'],
-            metrics['precision'],
-            metrics['recall'],
-            metrics['specificity'],
-            model_filename
-        ])
 
-def train_evaluate_save(
-    params: Dict[str, Any],
-    keys: List[str],
-    X_train: pd.DataFrame,
-    y_train: pd.Series,
-    X_val: pd.DataFrame,
-    y_val: pd.Series,
-    X_test: pd.DataFrame,
-    y_test: pd.Series,
-    csv_val: str,
-    csv_test: str,
-    preprocess_step: str
-):
-    """Treina, avalia, salva modelo e registra métricas de uma combinação.
+def write_result(preprocess: str, keys: list[str], params: dict[str, Any], metrics: dict[str, float], path: Path) -> None:
+    row = [preprocess, *[params[k] for k in keys], *[metrics[m] for m in METRICS], str(path)]
+    with RESULTS.open("a", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerow(row)
 
-    Args:
-        params: Hiperparâmetros da Random Forest.
-        keys: Ordem das chaves de hiperparâmetros para persistência.
-        X_train: Features de treino.
-        y_train: Labels de treino.
-        X_val: Features de validação.
-        y_val: Labels de validação.
-        X_test: Features de teste.
-        y_test: Labels de teste.
-        csv_val: Caminho do CSV de validação.
-        csv_test: Caminho do CSV de teste.
-        preprocess_step: Identificador do pré-processamento.
 
-    Returns:
-        None.
-    """
+def train_and_evaluate(params, X_train, y_train, X_val, y_val):
     model = RandomForestModel(params)
     model.fit(X_train, y_train)
-    
+    return model, evaluate_model(y_val, model.predict(X_val))
 
-    y_pred_val = model.predict(X_val)
-    metrics_val = evaluate_model(y_val, y_pred_val)
-    
 
-    y_pred_test = model.predict(X_test)
-    metrics_test = evaluate_model(y_test, y_pred_test)
-    
-    param_str = "_".join([f"{k}-{v}".replace("None", "NA") for k, v in params.items()])
-    model_filename = f"models/rf_{preprocess_step}_{param_str}.joblib"
-    model.save(model_filename)
-    
-    save_metrics(csv_val, preprocess_step, params, keys, metrics_val, model_filename)
-    save_metrics(csv_test, preprocess_step, params, keys, metrics_test, model_filename)
+def main() -> None:
+    keys = list(PARAM_GRID)
+    combinations = list(product(*PARAM_GRID.values()))
+    preprocess_files = [p.stem for p in sorted((PROCESSED / "training").glob("*.xlsx"))]
 
-def get_preprocess_files() -> List[str]:
-    """Lista nomes-base dos arquivos de pré-processamento disponíveis.
+    MODELS.mkdir(exist_ok=True)
+    write_header(keys)
+    for preprocess in preprocess_files:
+        X_train, y_train = load_dataset("training", preprocess)
+        X_val, y_val = load_dataset("validation", preprocess)
+        for values in combinations:
+            params = dict(zip(keys, values))
+            model, metrics = train_and_evaluate(params, X_train, y_train, X_val, y_val)
+            path = model_path(preprocess, params)
+            model.save(str(path))
+            write_result(preprocess, keys, params, metrics, path)
 
-    Returns:
-        Lista de nomes-base dos arquivos ``.xlsx`` em ``data/processed/training``.
-    """
-    path = "data/processed/training"
-    if not os.path.exists(path):
-        return []
-    files = glob.glob(os.path.join(path, "*.xlsx"))
-    return [os.path.splitext(os.path.basename(f))[0] for f in sorted(files)]
-
-def main():
-    """Executa o fluxo de grid search para todos os pré-processamentos.
-
-    Returns:
-        None.
-    """
-    preprocess_files = get_preprocess_files()
-    
-    if not preprocess_files:
-        print("Nenhum arquivo de pré-processamento encontrado em data/processed/training/")
-        return
-
-    param_grid = {
-        'n_estimators': [50, 100, 200, 300], 
-        'max_depth': [5, 10, 20],
-        'min_samples_split': [2, 5],
-        'min_samples_leaf': [1, 2],
-        'max_features': [None],
-        'bootstrap': [True, False],
-    }
-    
-    keys = list(param_grid.keys())
-    combinations = list(product(*param_grid.values()))
-    
-    os.makedirs("models", exist_ok=True)
-    csv_val = "resultados_grid_search_validacao.csv"
-    csv_test = "resultados_grid_search_teste.csv"
-    
-    headers = ["preprocess_step", *keys, "accuracy", "precision", "recall", "specificity", "model_file"]
-    initialize_csv(csv_val, headers)
-    initialize_csv(csv_test, headers)
-
-    total_steps = len(preprocess_files) * len(combinations)
-    print(f"Iniciando Grid Search: {len(preprocess_files)} pré-processamentos x {len(combinations)} combinações = {total_steps} modelos.")
-    
-    for preprocess_step in preprocess_files:
-        print(f"\nProcessando: {preprocess_step}")
-        try:
-            X_train, y_train = load_dataset("training", preprocess_step)
-            X_val, y_val = load_dataset("validation", preprocess_step)
-            X_test, y_test = load_dataset("test", preprocess_step)
-            
-            for values in tqdm(combinations, ncols=100, desc=preprocess_step):
-                params = dict(zip(keys, values))
-                train_evaluate_save(params, keys, X_train, y_train, X_val, y_val, X_test, y_test, csv_val, csv_test, preprocess_step)
-                
-        except Exception as e:
-            print(f"Erro ao processar {preprocess_step}: {e}")
-
-    print("Grid Search concluído.")
 
 if __name__ == "__main__":
     main()

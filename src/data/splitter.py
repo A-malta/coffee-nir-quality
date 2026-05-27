@@ -1,44 +1,24 @@
 import numpy as np
-from typing import Tuple, List
+
 from .kennard_stone import kennard_stone
 
+
 class DataSplitter:
-    def __init__(self, test_val_ratio: float = 0.2, val_ratio_relative: float = 0.5):
-        """Inicializa proporções de divisão entre treino, teste e validação.
+    def __init__(self, validation_ratio: float = 0.2):
+        self.validation_ratio = validation_ratio
 
-        Args:
-            test_val_ratio: Fração reservada para teste+validação.
-            val_ratio_relative: Fração de validação dentro do conjunto remanescente.
-        """
-        self.test_val_ratio = test_val_ratio
-        self.val_ratio_relative = val_ratio_relative
+    def split_train_validation(self, X: np.ndarray, y: np.ndarray) -> tuple[list[int], list[int]]:
+        y = np.asarray(y)
+        val_idx = []
 
-    def split_indices(self, X: np.ndarray) -> Tuple[List[int], List[int], List[int]]:
-        """Divide índices em treino, teste e validação com Kennard-Stone.
+        for label in np.unique(y):
+            class_idx = np.flatnonzero(y == label)
+            if len(class_idx) < 2:
+                raise ValueError(f"Classe {label!r} precisa ter ao menos 2 amostras.")
+            n_val = min(max(round(len(class_idx) * self.validation_ratio), 1), len(class_idx) - 1)
+            val_idx.extend(class_idx[kennard_stone(X[class_idx], n_val)].tolist())
 
-        Args:
-            X: Matriz de amostras por atributos.
-
-        Returns:
-            Tupla com listas de índices de treino, teste e validação.
-        """
-        n_total = X.shape[0]
-        
-
-        n_train = int((1 - self.test_val_ratio) * n_total)
-        idx_train = kennard_stone(X, n_train)
-        
-
-        all_indices = set(range(n_total))
-        remaining_indices = list(all_indices - set(idx_train))
-        X_remaining = X[remaining_indices]
-        
-
-        n_test = int(len(remaining_indices) * 0.5)
-        idx_test_relative = kennard_stone(X_remaining, n_test)
-        idx_test = [remaining_indices[i] for i in idx_test_relative]
-        
-
-        idx_val = list(set(remaining_indices) - set(idx_test))
-        
-        return idx_train, idx_test, idx_val
+        val_idx = sorted(val_idx)
+        val_set = set(val_idx)
+        train_idx = [i for i in range(len(X)) if i not in val_set]
+        return train_idx, val_idx

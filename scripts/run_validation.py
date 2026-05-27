@@ -1,153 +1,53 @@
-import sys
 import os
-import pandas as pd
-import glob
-from typing import Tuple, Dict, Any, Optional
 import re
+import sys
+from pathlib import Path
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import pandas as pd
 
-from src.data.loader import load_excel_data
-from src.models.random_forest import RandomForestModel
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from scripts.run_grid_search import RESULTS, load_dataset
 from src.evaluation.metrics import evaluate_model
+from src.models.random_forest import RandomForestModel
 
-def load_dataset(type_data: str, preprocess_step: str) -> Tuple[pd.DataFrame, pd.Series]:
-    """Carrega atributos processados e rótulos para um split específico.
 
-    Args:
-        type_data: Nome do split (training, validation ou test).
-        preprocess_step: Nome-base do arquivo de pré-processamento.
+OUT = Path("resultados_validacao_final.csv")
+MARKER = "_n_estimators-"
 
-    Returns:
-        Tupla ``(X, y)`` com amostras alinhadas.
 
-    Raises:
-        FileNotFoundError: Se o arquivo de atributos não existir.
-        KeyError: Se a coluna de target não puder ser inferida.
-    """
-    x_path = f"data/processed/{type_data}/{preprocess_step}.xlsx"
-    y_path = f"data/raw_split/{type_data}_quality.xlsx"
-    
-    if not os.path.exists(x_path):
-        raise FileNotFoundError(f"Arquivo de dados não encontrado: {x_path}")
+def preprocess_from_model(path: Path) -> str | None:
+    stem = path.stem
+    return stem[3:stem.index(MARKER)] if stem.startswith("rf_") and MARKER in stem else None
 
-    X_raw = load_excel_data(x_path)
-    y_raw = load_excel_data(y_path)
-    
-    X = X_raw.iloc[:, 1:].T
-    
-    target_col = 'label'
-    if target_col not in y_raw.columns:
-        if len(y_raw.columns) > 1:
-            target_col = y_raw.columns[1]
-        else:
-            raise KeyError("Não foi possível identificar a coluna de target (label).")
 
-    y = y_raw[target_col]
-    
-    min_size = min(X.shape[0], len(y))
-    return X.iloc[:min_size], y.iloc[:min_size]
+def model_files() -> list[Path]:
+    if RESULTS.exists():
+        df = pd.read_csv(RESULTS)
+        if "model_file" in df:
+            return [Path(p) for p in df["model_file"].dropna().drop_duplicates() if Path(p).exists()]
+    return sorted(Path("models").glob("*.joblib"))
 
-def extract_preprocess_step(model_filename: str) -> Optional[str]:
-    """Extrai identificador de pré-processamento do nome do arquivo do modelo.
 
-    Suporta nomes no formato gerado por ``run_grid_search.py``:
-    ``rf_<preprocess_step>_n_estimators-... .joblib``.
-
-    Args:
-        model_filename: Nome do arquivo ``.joblib`` do modelo.
-
-    Returns:
-        String do pré-processamento ou ``None`` se não houver correspondência.
-    """
-    base_name = os.path.splitext(os.path.basename(model_filename))[0]
-    if not base_name.startswith("rf_"):
+def evaluate(path: Path) -> dict | None:
+    if not re.match(r"rf_.+_n_estimators-", path.name):
         return None
-
-    marker = "_n_estimators-"
-    marker_index = base_name.find(marker)
-    if marker_index == -1:
+    preprocess = preprocess_from_model(path)
+    if preprocess is None:
         return None
+    X, y = load_dataset("validation", preprocess)
+    metrics = evaluate_model(y, RandomForestModel.load(str(path)).predict(X))
+    return {"model": path.name, "preprocess_step": preprocess, **{f"val_{k}": v for k, v in metrics.items()}}
 
-    preprocess_step = base_name[len("rf_"):marker_index]
-    return preprocess_step or None
 
-def evaluate_single_model(model_path: str) -> Optional[Dict[str, Any]]:
-    """Avalia um modelo salvo em validação e teste e retorna métricas.
-
-    Args:
-        model_path: Caminho completo do modelo salvo.
-
-    Returns:
-        Dicionário com métricas por split ou ``None`` em caso de erro/incompatibilidade.
-    """
-    try:
-        filename = os.path.basename(model_path)
-        
-        if not re.match(r"rf_\d{3}_", filename):
-            return None
-            
-        preprocess_step = extract_preprocess_step(filename)
-        
-        if not preprocess_step:
-            print(f"Aviso: Não foi possível identificar o pré-processamento no arquivo {filename}. Pulando.")
-            return None
-
-        X_test, y_test = load_dataset("test", preprocess_step)
-        X_val, y_val = load_dataset("validation", preprocess_step)
-        
-        model = RandomForestModel.load(model_path)
-        
-        y_pred_test = model.predict(X_test)
-        metrics_test = evaluate_model(y_test, y_pred_test)
-        
-        y_pred_val = model.predict(X_val)
-        metrics_val = evaluate_model(y_val, y_pred_val)
-        
-        result = {
-            "model": filename,
-            "preprocess_step": preprocess_step,
-        }
-        
-        for k, v in metrics_test.items():
-            result[f"test_{k}"] = v
-            
-        for k, v in metrics_val.items():
-            result[f"val_{k}"] = v
-            
-        return result
-    except Exception as e:
-        print(f"Erro ao avaliar {model_path}: {e}")
-        return None
-
-def main():
-    """Executa o fluxo principal do script.
-
-    Returns:
-        None.
-    """
-    models_dir = "models"
-    model_files = glob.glob(os.path.join(models_dir, "*.joblib"))
-    
-    if not model_files:
-        print(f"Nenhum modelo encontrado em {models_dir}")
-        return
-
-    print(f"Avaliando {len(model_files)} modelos nos conjuntos de TESTE e VALIDAÇÃO...")
-    
-    results = []
-    for model_path in model_files:
-        result = evaluate_single_model(model_path)
-        if result:
-            results.append(result)
-
-    if results:
-        df_results = pd.DataFrame(results)
-        df_results = df_results.sort_values(by="test_accuracy", ascending=False)
-        df_results.to_csv("resultados_validacao_final.csv", index=False)
-        print("Validação concluída. Resultados em 'resultados_validacao_final.csv'.")
-    else:
+def main() -> None:
+    results = [r for path in model_files() if (r := evaluate(path)) is not None]
+    if not results:
         print("Nenhum resultado gerado.")
+        return
+    pd.DataFrame(results).sort_values("val_accuracy", ascending=False).to_csv(OUT, index=False)
+    print(f"Validação concluída. Resultados em '{OUT}'.")
+
 
 if __name__ == "__main__":
     main()
