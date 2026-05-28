@@ -5,7 +5,6 @@ from typing import Union
 
 
 def _specificity_multiclass(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    """Calculate mean one-vs-rest specificity across classes."""
     cm = confusion_matrix(y_true, y_pred)
     total = cm.sum()
     specificities = []
@@ -24,15 +23,6 @@ def _specificity_multiclass(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
 
 def evaluate_model(y_true: Union[np.ndarray, pd.Series], y_pred: Union[np.ndarray, pd.Series]) -> dict[str, float]:
-    """Calculate classification metrics used by the pipeline.
-
-    Args:
-        y_true: Ground-truth labels.
-        y_pred: Predicted labels.
-
-    Returns:
-        Dictionary with accuracy, weighted precision, weighted recall and specificity.
-    """
     y_true_arr = np.asarray(y_true)
     y_pred_arr = np.asarray(y_pred)
 

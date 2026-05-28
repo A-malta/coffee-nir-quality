@@ -4,15 +4,22 @@ from sklearn.preprocessing import StandardScaler
 
 
 def kennard_stone(X: np.ndarray, n_samples: int) -> list[int]:
-    if n_samples <= 0:
-        return []
-    if n_samples >= len(X):
-        return list(range(len(X)))
+    """Seleciona amostras representativas pelo algoritmo Kennard-Stone.
 
+    - Padroniza a escala dos dados;
+    - Calcula as distâncias euclidianas entre todas as amostras;
+    - Começa selecionando as duas amostras mais distantes;
+    - Adiciona iterativamente a amostra mais distante do conjunto já selecionado;
+    - Retorna dos indices das amostras escolhidas.
+
+    Args:
+        X: Matriz de dados com uma amostra por linha.
+        n_samples: Quantidade de amostras a selecionar.
+
+    Returns:
+        Índices das amostras selecionadas.
+    """
     X = StandardScaler().fit_transform(X)
-    if n_samples == 1:
-        return [int(np.argmin(cdist(X, X.mean(axis=0, keepdims=True)).ravel()))]
-
     distances = cdist(X, X)
     selected = list(map(int, np.unravel_index(np.argmax(distances), distances.shape)))
 
