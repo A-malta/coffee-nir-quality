@@ -1,53 +1,90 @@
-import os
-import re
-import sys
 from pathlib import Path
 
+import joblib
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from scripts.run_grid_search import RESULTS, load_dataset
+from src.config import (
+    CONFUSION_MATRICES_DIR,
+    MODELS_DIR,
+    VALIDATION_RESULTS_FILE,
+)
+from src.data.dataset import load_modeling_dataset
 from src.evaluation.metrics import evaluate_model
-from src.models.random_forest import RandomForestModel
 
 
-OUT = Path("resultados_validacao_final.csv")
 MARKER = "_n_estimators-"
 
 
-def preprocess_from_model(path: Path) -> str | None:
+def preprocess_from_model(path: Path) -> str:
     stem = path.stem
-    return stem[3:stem.index(MARKER)] if stem.startswith("rf_") and MARKER in stem else None
+    return stem.removeprefix("rf_").split(MARKER, 1)[0]
 
 
 def model_files() -> list[Path]:
-    if RESULTS.exists():
-        df = pd.read_csv(RESULTS)
-        if "model_file" in df:
-            return [Path(p) for p in df["model_file"].dropna().drop_duplicates() if Path(p).exists()]
-    return sorted(Path("models").glob("*.joblib"))
+    return sorted(MODELS_DIR.glob("*.joblib"))
 
 
-def evaluate(path: Path) -> dict | None:
-    if not re.match(r"rf_.+_n_estimators-", path.name):
-        return None
+def plot_confusion_matrix(path: Path, y_true, y_pred) -> None:
+    labels = (
+        pd.Index(pd.concat([pd.Series(y_true), pd.Series(y_pred)], ignore_index=True).dropna())
+        .unique()
+        .tolist()
+    )
+    cm_percentage = confusion_matrix(y_true, y_pred, labels=labels, normalize="true") * 100
+
+    plt.figure(figsize=(8, 7))
+    sns.heatmap(
+        cm_percentage,
+        annot=True,
+        fmt=".1f",
+        cmap="Blues",
+        xticklabels=labels,
+        yticklabels=labels,
+        cbar_kws={"label": "Porcentagem (%)"},
+        vmin=0,
+        vmax=100,
+    )
+    plt.title(f"Matriz de Confusão\n{path.stem}", fontsize=10)
+    plt.ylabel("Classe Real")
+    plt.xlabel("Classe Prevista")
+    plt.savefig(CONFUSION_MATRICES_DIR / f"{path.stem}_cm.png", dpi=300)
+    plt.close()
+
+
+def evaluate(
+    path: Path,
+    datasets: dict[str, tuple[pd.DataFrame, pd.Series]],
+) -> dict[str, float | str]:
     preprocess = preprocess_from_model(path)
-    if preprocess is None:
-        return None
-    X, y = load_dataset("validation", preprocess)
-    metrics = evaluate_model(y, RandomForestModel.load(str(path)).predict(X))
-    return {"model": path.name, "preprocess_step": preprocess, **{f"val_{k}": v for k, v in metrics.items()}}
+
+    if preprocess not in datasets:
+        datasets[preprocess] = load_modeling_dataset("validation", preprocess)
+    X, y = datasets[preprocess]
+
+    model = joblib.load(path)
+
+    y_pred = model.predict(X)
+    metrics = evaluate_model(y, y_pred)
+
+    plot_confusion_matrix(path, y, y_pred)
+
+    return {
+        "model": path.name,
+        "preprocess_step": preprocess,
+        **{f"val_{k}": v for k, v in metrics.items()},
+    }
 
 
 def main() -> None:
-    results = [r for path in model_files() if (r := evaluate(path)) is not None]
-    if not results:
-        print("Nenhum resultado gerado.")
-        return
-    pd.DataFrame(results).sort_values("val_accuracy", ascending=False).to_csv(OUT, index=False)
-    print(f"Validação concluída. Resultados em '{OUT}'.")
-
-
-if __name__ == "__main__":
-    main()
+    CONFUSION_MATRICES_DIR.mkdir(exist_ok=True)
+    datasets: dict[str, tuple[pd.DataFrame, pd.Series]] = {}
+    results = [evaluate(path, datasets) for path in model_files()]
+    (
+        pd.DataFrame(results)
+        .sort_values("val_accuracy", ascending=False)
+        .to_csv(VALIDATION_RESULTS_FILE, index=False)
+    )
+    print(f"Pipeline concluída. Resultados em '{VALIDATION_RESULTS_FILE}'.")

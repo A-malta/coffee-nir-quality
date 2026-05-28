@@ -4,9 +4,9 @@ Pipeline para classificar a qualidade sensorial de café torrado a partir de esp
 
 ## Etapas
 
-Ao executar `python main.py`, o projeto roda três etapas:
+Ao executar `python main.py`, o projeto roda cinco etapas:
 
-1. **Split treino/validação (`scripts/run_split.py`)**
+1. **Split treino/validação (`src/data/splitter.py`)**
    - Lê espectros e qualidade sensorial.
    - Alinha as classes da coluna `Class` às amostras espectrais.
    - Separa aproximadamente 80% para treino e 20% para validação.
@@ -19,21 +19,41 @@ Ao executar `python main.py`, o projeto roda três etapas:
      - `data/raw_split/validation_quality.xlsx`
 
 2. **Pré-processamento (`scripts/run_preprocessing.py`)**
-   - Aplica Savitzky-Golay smoothing.
-   - Calcula 1ª e 2ª derivadas por Savitzky-Golay.
-   - Aplica mean centering usando a média do treino.
+   - Gera uma versão de pré-processamento.
+   - Aplica suavização por Savitzky-Golay.
+   - Calcula a 1ª derivada numérica.
+   - Calcula a 2ª derivada numérica sobre o resultado da 1ª derivada.
+   - Aplica mean centering separadamente em treino e validação.
    - Salva os arquivos processados em:
      - `data/processed/training/`
      - `data/processed/validation/`
 
-3. **Grid search (`scripts/run_grid_search.py`)**
+3. **Visualização de espectros (`scripts/plot.py`)**
+   - Lê os arquivos brutos de espectros e qualidade sensorial.
+   - Lê os espectros pré-processados gerados na etapa anterior.
+   - Gera um gráfico dos espectros brutos e um gráfico para cada versão pré-processada.
+   - Salva as figuras em:
+     - `plots/espectros_nir_brutos.png`
+     - `plots/espectros_nir_preprocessados_SG_1D+2D+MeanCentering.png`
+
+4. **Grid search (`scripts/run_grid_search.py`)**
+   - Lê a recipe YAML informada na execução da pipeline.
    - Treina `RandomForestClassifier` em cada combinação de hiperparâmetros.
-   - Usa GPU via cuML quando CUDA está disponível.
-   - Usa scikit-learn como fallback em CPU.
-   - Avalia cada modelo no conjunto de validação.
+   - Repete o treinamento com os mesmos parâmetros para:
+     - espectros brutos (`Raw`)
+     - espectros pré-processados (`SG_1D+2D+MeanCentering`)
+   - Registra métricas calculadas no conjunto de treino.
    - Salva:
      - modelos em `models/*.joblib`
-     - métricas em `resultados_grid_search_validacao.csv`
+     - métricas em `resultados_grid_search_treinamento.csv`
+
+5. **Validação final (`scripts/run_validation.py`)**
+   - Busca os modelos salvos em `models/*.joblib`.
+   - Avalia cada modelo no conjunto de validação correspondente ao pré-processamento indicado no nome do arquivo.
+   - Gera matrizes de confusão normalizadas.
+   - Salva:
+     - métricas em `resultados_validacao_final.csv`
+     - figuras em `confusion_matrices/*.png`
 
 ## Execução
 
@@ -43,44 +63,11 @@ Instale as dependências:
 pip install -r requirements.txt
 ```
 
-Execute com os caminhos padrão:
-
-```bash
-python main.py
-```
-
-Ou informe os arquivos manualmente:
+Execute informando os arquivos brutos:
 
 ```bash
 python main.py \
   --spectra-file data/RawSpectra_RoastedCoffee.xlsx \
-  --quality-file data/SensoryQuality_RoastedCoffee.xlsx
-```
-
-## Execução por etapa
-
-```bash
-python scripts/run_split.py
-python scripts/run_preprocessing.py
-python scripts/run_grid_search.py
-```
-
-O utilitário abaixo reavalia modelos salvos na validação e gera um consolidado ordenado:
-
-```bash
-python scripts/run_validation.py
-```
-
-## Backend da Random Forest
-
-Por padrão, o backend é escolhido automaticamente:
-
-- `cuml`, quando há GPU CUDA disponível.
-- `sklearn`, quando não há GPU acessível.
-
-Para forçar um backend:
-
-```bash
-COFFEE_NIR_RF_BACKEND=gpu python main.py
-COFFEE_NIR_RF_BACKEND=cpu python main.py
+  --quality-file data/SensoryQuality_RoastedCoffee.xlsx \
+  --recipe recipes/random_forest_grid_search.yaml
 ```
