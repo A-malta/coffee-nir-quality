@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 
@@ -8,18 +6,18 @@ from src.data.dataset import aligned_column, load_quality_table, load_raw_spectr
 from .kennard_stone import kennard_stone
 
 
-def save_spectra(wavelengths: pd.Series, spectra: pd.DataFrame, idx: list[int], name: str) -> None:
+def save_spectra(wavelengths, spectra, idx, name):
     out = pd.concat([wavelengths, spectra[[spectra.columns[i] for i in idx]]], axis=1)
     out.to_excel(RAW_SPLIT_DIR / name, index=False)
 
 
-def save_quality(quality: pd.DataFrame, sample_ids: list[str], name: str) -> None:
+def save_quality(quality, sample_ids, name):
     sample_col = quality.columns[0]
     out = pd.DataFrame({sample_col: sample_ids}).merge(quality, on=sample_col, how="left")
     out.to_excel(RAW_SPLIT_DIR / name, index=False)
 
 
-def run_split(spectra_file: Path, quality_file: Path, validation_ratio: float = 0.2) -> None:
+def run_split(spectra_file, quality_file, validation_ratio=0.2):
     wavelengths, spectra = load_raw_spectra(spectra_file)
     quality = load_quality_table(quality_file)
     sample_ids = spectra.columns.tolist()
@@ -27,7 +25,7 @@ def run_split(spectra_file: Path, quality_file: Path, validation_ratio: float = 
     features = np.asarray(spectra.T)
     labels = np.asarray(labels)
 
-    val_idx: list[int] = []
+    val_idx = []
     for class_label in np.unique(labels):
         class_indices = np.flatnonzero(labels == class_label)
         n_validation = round(len(class_indices) * validation_ratio)

@@ -1,0 +1,36 @@
+model:
+  type: random_forest
+  search:
+    n_trials: 1000
+    cv_folds: 5
+    scoring: min_class_recall
+    direction: maximize
+    save_top_models: 20
+    space:
+      n_estimators:
+        low: 300
+        high: 700
+        step: 50
+      max_depth:
+        low: 8
+        high: 15
+        step: 1
+      min_samples_split:
+        low: 8
+        high: 20
+        step: 1
+      min_samples_leaf:
+        low: 1
+        high: 8
+        step: 1
+      max_features:
+        low: 0.1
+        high: 0.6
+      bootstrap: [false, true]
+    feature_selection:
+      lasso:
+        enabled: true
+        C: 1.0
+        threshold: 0.00000001
+        max_iter: 5000
+        tol: 0.001

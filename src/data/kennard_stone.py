@@ -3,8 +3,8 @@ from scipy.spatial.distance import cdist
 from sklearn.preprocessing import StandardScaler
 
 
-def kennard_stone(X: np.ndarray, n_samples: int) -> list[int]:
-    """Seleciona amostras representativas pelo algoritmo Kennard-Stone.
+def kennard_stone(X, n_samples):
+    """Seleciona amostras representativas pelo algoritmo Kennard-Stone dentro de cada classe.
 
     - Padroniza a escala dos dados;
     - Calcula as distâncias euclidianas entre todas as amostras;
@@ -19,8 +19,17 @@ def kennard_stone(X: np.ndarray, n_samples: int) -> list[int]:
     Returns:
         Índices das amostras selecionadas.
     """
+    if n_samples <= 0:
+        return []
+
+    if n_samples >= len(X):
+        return list(range(len(X)))
+
     X = StandardScaler().fit_transform(X)
     distances = cdist(X, X)
+    if n_samples == 1:
+        return [int(np.argmax(distances.mean(axis=1)))]
+
     selected = list(map(int, np.unravel_index(np.argmax(distances), distances.shape)))
 
     while len(selected) < n_samples:

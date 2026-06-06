@@ -15,5 +15,5 @@ CLASS_TARGET_COLUMN = "Class"
 SCORE_TARGET_COLUMN = "Cup quality (points)"
 
 RAW_PREPROCESS_NAME = "Raw"
-GRID_SEARCH_RESULTS_FILE = Path("resultados_grid_search_treinamento.csv")
+BAYESIAN_SEARCH_RESULTS_FILE = Path("resultados_bayesian_search_treinamento.csv")
 VALIDATION_RESULTS_FILE = Path("resultados_validacao_final.csv")
