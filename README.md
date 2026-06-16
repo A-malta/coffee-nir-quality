@@ -2,6 +2,10 @@
 
 Pipeline para classificar a qualidade sensorial de café torrado a partir de espectros NIR.
 
+O fluxo completo faz a divisão treino/validação, gera uma versão pré-processada dos espectros,
+treina modelos Random Forest com busca bayesiana de hiperparâmetros e valida os melhores modelos
+no conjunto reservado.
+
 ## Etapas
 
 Ao executar `python main.py`, o projeto roda cinco etapas:
@@ -19,13 +23,12 @@ Ao executar `python main.py`, o projeto roda cinco etapas:
      - `data/raw_split/validation_quality.xlsx`
 
 2. **Pré-processamento (`scripts/run_preprocessing.py`)**
-   - Gera uma versão de pré-processamento.
-   - Aplica suavização por Savitzky-Golay.
-   - Calcula a 1ª derivada numérica.
+   - Gera a versão `SG_1D+MeanCentering`.
+   - Aplica Savitzky-Golay com janela 15, polinômio de ordem 2 e 1ª derivada.
    - Aplica mean centering separadamente em treino e validação.
    - Salva os arquivos processados em:
-     - `data/processed/training/`
-     - `data/processed/validation/`
+     - `data/processed/training/SG_1D+MeanCentering.xlsx`
+     - `data/processed/validation/SG_1D+MeanCentering.xlsx`
 
 3. **Visualização de espectros (`scripts/plot.py`)**
    - Lê os arquivos brutos de espectros e qualidade sensorial.
@@ -38,28 +41,42 @@ Ao executar `python main.py`, o projeto roda cinco etapas:
 4. **Busca bayesiana (`scripts/run_bayesian_search.py`)**
    - Lê a recipe YAML informada na execução da pipeline.
    - Usa Optuna para procurar bons hiperparâmetros do `RandomForestClassifier`.
-   - Avalia cada tentativa em um holdout estratificado separado a partir do conjunto de treino.
-   - Usa como critério o menor recall entre as classes, isto é, a menor diagonal principal da matriz de confusão.
-   - Seleciona o holdout interno com Kennard-Stone dentro de cada classe para manter representatividade espectral.
-   - Aplica seleção de features com LASSO antes do Random Forest quando `feature_selection.lasso.enabled` estiver ativo na recipe.
+   - Avalia cada tentativa com `StratifiedKFold`, usando o número de folds definido em `cv_folds`.
+   - Usa como critério `min_class_recall`, isto é, o menor recall entre as classes.
+   - Aplica seleção de features com LASSO antes do Random Forest.
    - Repete a busca para:
      - espectros brutos (`Raw`)
      - espectros pré-processados (`SG_1D+MeanCentering`)
-   - Treina e salva a fração superior definida por `save_top_fraction`.
+   - Ordena todos os candidatos das duas versões de espectros e salva os melhores modelos conforme `save_top_models`.
    - Salva:
      - modelos em `models/*.joblib`
      - métricas em `resultados_bayesian_search_treinamento.csv`
-   - O CSV inclui `holdout_score`, seletor usado e quantidade de features selecionadas.
-   - Quantidade salva por pré-processamento: `ceil(n_trials * save_top_fraction)`.
+   - O CSV inclui `cv_score`, hiperparâmetros, métricas no treino, seletor usado, quantidade de features selecionadas e nome do arquivo do modelo.
 
 5. **Validação final (`scripts/run_validation.py`)**
    - Busca os modelos listados em `resultados_bayesian_search_treinamento.csv`.
-   - Se esse arquivo não existir, usa os modelos salvos em `models/*.joblib`.
    - Avalia cada modelo no conjunto de validação correspondente ao pré-processamento indicado no nome do arquivo.
+   - Ordena os resultados pelo menor recall de classe, recall médio por classe e acurácia.
+   - Atualiza o ranking em `resultados_bayesian_search_treinamento.csv` para seguir a ordem da validação.
    - Gera matrizes de confusão normalizadas.
    - Salva:
      - métricas em `resultados_validacao_final.csv`
      - figuras em `confusion_matrices/*.png`
+
+## Recipe
+
+A recipe define o espaço de busca do Random Forest, o número de tentativas, o número de folds,
+o critério de otimização e a configuração do LASSO.
+
+A recipe disponível em `recipes/6.yaml` usa:
+
+- `n_trials: 1000`
+- `cv_folds: 5`
+- `scoring: min_class_recall`
+- `direction: maximize`
+- `save_top_models: 20`
+- hiperparâmetros buscados: `n_estimators`, `max_depth`, `min_samples_split`, `min_samples_leaf`, `max_features` e `bootstrap`
+- seleção de features por LASSO com `C`, `threshold`, `max_iter` e `tol`
 
 ## Execução
 
@@ -75,5 +92,28 @@ Execute informando os arquivos brutos:
 python main.py \
   --spectra-file data/RawSpectra_RoastedCoffee.xlsx \
   --quality-file data/SensoryQuality_RoastedCoffee.xlsx \
-  --recipe recipes/random_forest_bayesian_search.yaml
+  --recipe recipes/6.yaml
 ```
+
+## Entradas Esperadas
+
+- O arquivo de espectros deve conter a aba `RawSpectra_RoastedCoffee`.
+- O arquivo de qualidade sensorial deve conter a aba `Cup quality_RoastedCoffee`.
+- A coluna usada como alvo de classificação é `Class`.
+
+## Saídas
+
+- `data/raw_split/`: espectros e qualidade separados em treino e validação.
+- `data/processed/`: espectros pré-processados para treino e validação.
+- `plots/`: gráficos dos espectros brutos e pré-processados.
+- `models/`: modelos treinados em formato `.joblib`.
+- `resultados_bayesian_search_treinamento.csv`: ranking e métricas dos modelos salvos após a busca.
+- `resultados_validacao_final.csv`: métricas finais no conjunto de validação.
+- `confusion_matrices/`: matrizes de confusão normalizadas dos modelos validados.
+
+## Scripts Auxiliares
+
+As etapas também podem ser chamadas individualmente pelos módulos em `scripts/`, desde que os
+artefatos esperados pelas etapas anteriores já existam. O script `scripts/filter_results.py`
+mantém em `resultados_bayesian_search_treinamento.csv` apenas os modelos presentes em
+`resultados_validacao_final.csv`.

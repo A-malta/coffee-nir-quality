@@ -1,6 +1,7 @@
 # Ambiente virtual
 venv/
 .env/
+cnq/
 
 # Saídas e resultados
 __pycache__/
