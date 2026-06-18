@@ -112,21 +112,6 @@ def add_final_rank(results):
     return results
 
 
-def save_bayesian_results_for_validated_models(validation_results):
-    bayesian_results = pd.read_csv(BAYESIAN_SEARCH_RESULTS_FILE)
-    validated_models = validation_results["model"].tolist()
-    order = {model: index for index, model in enumerate(validated_models)}
-    filtered_results = (
-        bayesian_results[bayesian_results["model_file"].isin(order.keys())]
-        .assign(_validation_order=lambda df: df["model_file"].map(order))
-        .sort_values("_validation_order")
-        .drop(columns="_validation_order")
-    )
-    filtered_results["rank"] = range(1, len(filtered_results) + 1)
-
-    save_csv(filtered_results, BAYESIAN_SEARCH_RESULTS_FILE)
-
-
 def plot_validation_confusion_matrices(validation_results, datasets):
     for final_rank, model_name in enumerate(validation_results["model"], start=1):
         path = MODELS_DIR / model_name
@@ -147,7 +132,6 @@ def run_validation():
     validation_results = add_final_rank(sort_results(pd.DataFrame(results)))
 
     save_csv(validation_results, VALIDATION_RESULTS_FILE)
-    save_bayesian_results_for_validated_models(validation_results)
     plot_validation_confusion_matrices(validation_results, datasets)
 
     print(f"Pipeline concluída. Resultados em '{VALIDATION_RESULTS_FILE}'.")

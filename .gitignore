@@ -6,7 +6,11 @@ cnq/
 # Saídas e resultados
 __pycache__/
 output/
-
+confusion_matrices_1/
+confusion_matrices
+plots/
+resultados_bayesian_search_treinamento.csv
+resultados_validacao_final.csv
 # Arquivos temporários e de cache
 *.log
 *.tmp
@@ -27,3 +31,4 @@ dist/
 /models/
 *.csv
 *.xlsx
+data/

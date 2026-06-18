@@ -1,7 +1,7 @@
 model:
   type: random_forest
   search:
-    n_trials: 1000
+    n_trials: 10000
     cv_folds: 5
     scoring: min_class_recall
     direction: maximize
