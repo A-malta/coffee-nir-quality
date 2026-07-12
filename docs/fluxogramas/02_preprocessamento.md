@@ -1,68 +1,26 @@
-# Fluxograma 02 - Pré-processamento espectral
+# Figura 5 - Pré-processamento espectral
 
-Fluxograma metodológico da etapa de tratamento dos espectros NIR antes da modelagem.
+Reprodução da Figura 5 do TCC (página 30), preservando o conteúdo visual original.
 
-## Convenção visual
+![Fluxograma de execução dos pré-processamentos espectrais.](assets/figura-05-preprocessamento-espectral.png)
 
-- Terminador: início ou fim do processo.
-- Paralelogramo: entrada ou saída de dados/resultados.
-- Retângulo: processo, transformação ou análise.
-- Losango: decisão, repetição ou seleção.
+**Figura 5 – Fluxograma de execução dos pré-processamentos espectrais.**
 
-```mermaid
----
-config:
-  theme: neutral
-  look: classic
-  fontFamily: '''Open Sans Variable'', sans-serif'
-  themeVariables:
-    fontFamily: '''Open Sans Variable'', sans-serif'
-    primaryColor: '#F1FAF6'
-    primaryBorderColor: '#75B99A'
-    primaryTextColor: '#263238'
-    lineColor: '#7AA695'
-    secondaryColor: '#FFF7E6'
-    tertiaryColor: '#EEF6FF'
----
-flowchart TB
- subgraph PIPE["Pipeline de pré-processamento"]
-    direction TB
-        mc["Mean Centering"]
-        d1["1ª Derivada espectral"]
-        sg["Savitzky-Golay<br>janela=15, ord=2"]
-  end
-    A(["Início"]) --> F[/"Dados brutos - treinamento"/] & G[/"Dados brutos - validação"/]
-    sg --> d1
-    d1 --> mc
-    F --> PIPE
-    G --> PIPE
-    F -. sem transformação .-> OUT_F[/"Dados brutos - treinamento"/]
-    G -. sem transformação .-> OUT_G[/Dados brutos - validação/]
-    PIPE --> OUT_O[/Dados de treinamento<br>SG_1D+MeanCentering/] & OUT_P[/"Dados de validação SG_1D+MeanCentering"/]
-    OUT_F --> Q(["Fim"])
-    OUT_G --> Q
-    OUT_O --> Q
-    OUT_P --> Q
+Fonte: Elaborado pela autora.
 
-    classDef terminador fill:#E8F6EF,stroke:#62B58F,color:#263238
-    classDef dados fill:#EAF2FF,stroke:#6C91C2,color:#263238
-    classDef processo fill:#FFF3D6,stroke:#D4A83F,color:#263238
+## Procedimento descrito no TCC
 
-    class A,Q terminador
-    class F,G,OUT_F,OUT_G,OUT_O,OUT_P dados
-    class sg,d1,mc processo
+O pré-processamento foi aplicado sequencialmente:
 
-    style PIPE fill:#F7F7F7,stroke:#D6D6D6,color:#263238
-    linkStyle default stroke:#7AA695,stroke-width:2px
-```
+1. filtro de Savitzky-Golay, com janela 15 e polinômio de grau 2;
+2. primeira derivada espectral;
+3. *mean centering*, subtraindo de cada comprimento de onda a média do respectivo conjunto.
 
-## Entradas
+Treinamento e validação foram processados separadamente para preservar a independência do conjunto de validação. Os espectros sem transformação também foram mantidos para comparação com a versão `SG_1D+MeanCentering`.
 
-- Espectros NIR do conjunto de treinamento.
-- Espectros NIR do conjunto de validação.
+## Conjuntos resultantes
 
-## Saídas
-
-- Matriz espectral de treinamento pré-processada.
-- Matriz espectral de validação pré-processada, mantida fora do ajuste dos modelos.
-- Sinais preparados para modelagem multivariada.
+- dados brutos de treinamento;
+- dados brutos de validação;
+- dados de treinamento `SG_1D+MeanCentering`;
+- dados de validação `SG_1D+MeanCentering`.

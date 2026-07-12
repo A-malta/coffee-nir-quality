@@ -1,73 +1,31 @@
-# Fluxograma 00 - Pipeline geral
+# Figura 3 - Pipeline metodológica geral
 
-Visão metodológica integrada da pipeline de classificação da qualidade sensorial de café torrado a partir de espectros NIR.
+Reprodução da Figura 3 do TCC (página 27), preservando o conteúdo visual original.
 
-## Convenção visual
+![Esquema geral da pipeline metodológica utilizada para classificação de cafés especiais a partir de espectros NIR.](assets/figura-03-pipeline-geral.png)
 
-- Terminador: início ou fim do processo.
-- Paralelogramo: entrada ou saída de dados/resultados.
-- Retângulo: processo, transformação ou análise.
-- Losango: decisão, repetição ou seleção.
+**Figura 3 – Esquema geral da pipeline metodológica utilizada para classificação de cafés especiais a partir de espectros NIR.**
 
-```mermaid
----
-config:
-  theme: neutral
-  look: classic
-  fontFamily: '''Open Sans Variable'', sans-serif'
-  fontSize: 18
-  flowchart:
-    curve: basis
-    nodeSpacing: 50
-    rankSpacing: 58
-  themeVariables:
-    primaryColor: '#F1FAF6'
-    primaryBorderColor: '#75B99A'
-    primaryTextColor: '#263238'
-    lineColor: '#7AA695'
-    secondaryColor: '#FFF7E6'
-    tertiaryColor: '#EEF6FF'
----
-flowchart TD
-    A([Início da pipeline]) --> B[/Dados iniciais<br/>espectros NIR e qualidade sensorial/]
+Fonte: Elaborado pela autora.
 
-    B --> C[[Divisão treino/validação<br/>dos dados]]
+## Descrição metodológica
 
-    C --> F[/Conjunto de treinamento/]
-    C --> G[/Conjunto de validação/]
+A pipeline foi implementada em Python e executada de forma contínua. O trabalho descreve cinco etapas principais:
 
-    F --> SG[[Savitzky-Golay]]
-    G --> SG
+1. carregamento e divisão dos dados;
+2. pré-processamento espectral;
+3. visualização exploratória;
+4. treinamento com seleção de variáveis e busca bayesiana de hiperparâmetros;
+5. validação final.
 
-    SG --> DER[[1ª derivada]]
-    DER --> MC[[Mean Centering]]
-
-    MC --> H[/Conjunto de treinamento tratado/]
-    MC --> I[/Conjunto de validação tratado/]
-
-    H --> M[[Otimização de hiperparâmetros<br/>e treinamento dos modelos]]
-
-    M --> N[/Modelos candidatos treinados/]
-
-    N --> O[[Avaliação final do modelo]]
-    I --> O
-
-    O --> P[/Resultados finais<br/>métricas preditivas, matrizes de confusão<br/>e comparação entre modelos/]
-    P --> Q([Fim da pipeline])
-
-    classDef terminador fill:#E8F6EF,stroke:#62B58F,color:#263238
-    classDef dados fill:#EAF2FF,stroke:#6C91C2,color:#263238
-    classDef processo fill:#FFF3D6,stroke:#D4A83F,color:#263238
-
-    class A,Q terminador
-    class B,F,G,H,I,N,P dados
-    class C,SG,DER,MC,M,O processo
-```
+A esteira foi executada cinco vezes, sem definição de *seed* para reprodutibilidade.
 
 ## Etapas detalhadas
 
-- [01 - Divisão treino/validação](01_divisao_dados.md): Separação estratificada utilizando o algoritmo Kennard-Stone para garantir representatividade espectral.
-- [02 - Pré-processamento espectral](02_preprocessamento.md): Pré-tratamento sequencial dos sinais por Savitzky-Golay, 1ª derivada e Mean Centering, aplicado de forma independente para evitar vazamento de dados.
-- [03 - Visualização dos espectros](03_visualizacao_espectros.md): Análise exploratória e gráfica dos perfis espectrais antes e após o tratamento.
-- [04 - Otimização e treinamento](04_grid_search.md): Busca exaustiva (Grid Search) pelos melhores hiperparâmetros do classificador Random Forest.
-- [05 - Avaliação final do modelo](05_validacao_final.md): Avaliação do poder preditivo dos modelos em um conjunto de dados estritamente não visto durante o treinamento.
+- [01 - Divisão em treinamento e validação](01_divisao_dados.md)
+- [02 - Pré-processamento espectral](02_preprocessamento.md)
+- [03 - Visualização dos espectros](03_visualizacao_espectros.md)
+- [04 - Seleção de variáveis, treinamento e busca de hiperparâmetros](04_grid_search.md)
+- [05 - Validação final](05_validacao_final.md)
+
+> Nota de fidelidade: a visualização exploratória é descrita como uma das cinco etapas no texto, embora não apareça como um bloco independente na Figura 3.
