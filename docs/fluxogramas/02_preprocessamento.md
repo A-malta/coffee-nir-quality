@@ -17,6 +17,12 @@ config:
   fontFamily: '''Open Sans Variable'', sans-serif'
   themeVariables:
     fontFamily: '''Open Sans Variable'', sans-serif'
+    primaryColor: '#F1FAF6'
+    primaryBorderColor: '#75B99A'
+    primaryTextColor: '#263238'
+    lineColor: '#7AA695'
+    secondaryColor: '#FFF7E6'
+    tertiaryColor: '#EEF6FF'
 ---
 flowchart TB
  subgraph PIPE["Pipeline de pré-processamento"]
@@ -38,7 +44,17 @@ flowchart TB
     OUT_O --> Q
     OUT_P --> Q
 
-    style PIPE fill:#f9f9f9
+    classDef terminador fill:#E8F6EF,stroke:#62B58F,color:#263238
+    classDef dados fill:#EAF2FF,stroke:#6C91C2,color:#263238
+    classDef processo fill:#FFF3D6,stroke:#D4A83F,color:#263238
+
+    class A,Q terminador
+    class F,G,OUT_F,OUT_G,OUT_O,OUT_P dados
+    class sg,d1,mc processo
+
+    style PIPE fill:#F7F7F7,stroke:#D6D6D6,color:#263238
+    linkStyle default stroke:#7AA695,stroke-width:2px
+```
 
 ## Entradas
 

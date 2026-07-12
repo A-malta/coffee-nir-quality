@@ -13,83 +13,76 @@ Fluxograma detalhado da etapa de seleção de variáveis, otimização bayeseana
 ---
 config:
   theme: neutral
+  look: classic
+  fontFamily: '''Open Sans Variable'', sans-serif'
+  themeVariables:
+    fontSize: 28
+    fontFamily: '''Open Sans Variable'', sans-serif'
+    primaryColor: '#F1FAF6'
+    primaryBorderColor: '#75B99A'
+    primaryTextColor: '#263238'
+    lineColor: '#7AA695'
+    secondaryColor: '#FFF7E6'
+    tertiaryColor: '#EEF6FF'
 ---
-flowchart TB
-    subgraph LassoSelection["Fase 1: Seleção de Variáveis (Lasso)"]
-        direction TB
-            L2["Padronização de Dados (Z-score)"]
-            L1["Ajuste do Seletor (Lasso)"]
-            L3["Regressão Logística com Penalização L1"]
-            L4["Extrair coeficientes máximos por variável"]
-            L5{"Magnitude do coeficiente <= Limiar?"}
-            L6["Manter variável no subconjunto"]
-            L7["Descartar variável"]
-            L10["Gerar máscara de seleção final"]
+flowchart TD
+    START([Início da etapa]) --> LOAD[/Dados de treinamento<br/>espectros e classes/]
+    
+    subgraph F1 [Fase 1: Otimização de Hiperparâmetros]
+        direction LR
+        GS[[Busca em Grade Prévia<br/>Exploração inicial]] --> OPTUNA[[Otimização Bayesiana<br/>Optuna TPE]]
     end
-    subgraph ObjectiveFunction["Função Objetivo (Avaliação)"]
+    
+    LOAD --> GS
+    OPTUNA --> CV
+    
+    subgraph F2 [Fase 2: Validação Cruzada Estratificada]
         direction TB
-            CV2["Treinar Florestas Aleatórias"]
-            CV1["Validação Cruzada Estratificada (5-fold)"]
-            CV3["Predizer Partição de Teste"]
-            CV4["Calcular Sensibilidade Mínima entre Classes"]
-            CV5["Média do Desempenho entre Dobras"]
+        CV{Validação Cruzada<br/>Stratified K-Fold}
+        
+        subgraph FOLD [Pipeline executada em cada Fold]
+            direction LR
+            TRAIN_FOLD[/Subconjunto de<br/>Treinamento/] --> LASSO[[Seleção de Variáveis<br/>Lasso L1 / saga]]
+            LASSO --> RF[[Treinamento do Classificador<br/>Random Forest]]
+            
+            VAL_FOLD[/Subconjunto de<br/>Validação/] --> EVAL[[Avaliação do<br/>Desempenho]]
+            
+            RF --> EVAL
+        end
+        
+        CV -->|Separação| TRAIN_FOLD
+        CV -->|Separação| VAL_FOLD
+        
+        EVAL --> METRIC[/Métrica: minimum<br/>class recall/]
+        METRIC --> SCORE[[Cálculo do CV Score<br/>Média dos folds]]
     end
-    subgraph OptunaSearch["Fase 2: Otimização Bayesiana"]
-        direction TB
-            O2["Amostrador TPE (Tree-structured Parzen Estimator)"]
-            O1["Definir Espaço de Busca"]
-            ObjectiveFunction
-            O3{"Número de tentativas atingido?"}
-            O4["Retornar Melhor Configuração"]
+    
+    SCORE --> BEST10
+    
+    subgraph F3 [Fase 3: Treinamento dos Modelos Finais]
+        direction LR
+        BEST10[/10 melhores<br/>combinações/] --> FINAL_LASSO[[Seleção de Variáveis<br/>Todo o conjunto de treino]]
+        FINAL_LASSO --> FINAL_RF[[Treinamento Final<br/>Random Forest]]
+        FINAL_RF --> EXPORT[/Modelos finais<br/>e resultados/]
     end
-    subgraph FinalTraining["Fase 3: Treinamento Final e Avaliação"]
-        direction TB
-            F2["Reajustar Seletor Lasso"]
-            F1["Ranquear Melhores Candidatos"]
-            F3["Reduzir Dimensionalidade do Treino"]
-            F4["Treinar Florestas Aleatórias"]
-            F5["Montar Pipeline de Modelagem"]
-            F6["Avaliação de Desempenho Multiclasse"]
-    end
-        START([Início da etapa]) --> LOAD[/"Dados de Treinamento<br>(Espectros + Classes)"/]
-        START -. "reservado" .-> VAL[/"Conjunto de Validação<br>(estritamente isolado)"/]
-        LOAD --> L1
-        L1 --> L2
-        L2 --> L3
-        L3 --> L4
-        L4 --> L5
-        L5 -- "Sim" --> L7
-        L5 -- "Não" --> L6
-        L7 --> L10
-        L6 --> L10
-        L10 --> D_TYPE{"Próximo tipo<br>de dado?"}
-        D_TYPE -- "Raw" --> DATA_RAW[/"Espectros Brutos<br>(variáveis reduzidas)"/]
-        D_TYPE -- "SG_1D+2D+MeanCentering" --> DATA_PRE[/"Espectros Pré-processados<br>(variáveis reduzidas)"/]
-        D_TYPE -- "Todos avaliados" --> RANKING["RANKING"]
-        O1 --> O2
-        CV1 --> CV2
-        CV2 --> CV3
-        CV3 --> CV4
-        CV4 --> CV5
-        O2 --> ObjectiveFunction
-        CV5 --> O3
-        O3 -- "Não" --> O2
-        O3 -- "Sim" --> O4
-        DATA_RAW --> O1
-        DATA_PRE --> O1
-        O4 --> D_TYPE
-        F1 --> F2
-        F2 --> F3
-        F3 --> F4
-        F4 --> F5
-        F5 --> F6
-        RANKING --> F1
-        F6 --> EXPORT[/"Modelos Serializados<br>Resultados de Treinamento (CSV)"/]
-        EXPORT --> END([Fim da etapa])
-        VAL -.-> END
+    
+    LOAD -.-> FINAL_LASSO
+    EXPORT --> END([Fim da etapa])
 
-        style LassoSelection fill:#fcfcfc
-        style OptunaSearch fill:#fcfcfc
+    classDef terminador fill:#E8F6EF,stroke:#62B58F,color:#263238
+    classDef dados fill:#EAF2FF,stroke:#6C91C2,color:#263238
+    classDef processo fill:#FFF3D6,stroke:#D4A83F,color:#263238
+    classDef decisao fill:#F4E5F7,stroke:#A363B3,color:#263238
+
+    class START,END terminador
+    class LOAD,TRAIN_FOLD,VAL_FOLD,METRIC,BEST10,EXPORT dados
+    class GS,OPTUNA,LASSO,RF,EVAL,SCORE,FINAL_LASSO,FINAL_RF processo
+    class CV decisao
+    
+    style F1 fill:#fafafa,stroke:#cccccc,stroke-dasharray: 5 5
+    style F2 fill:#fafafa,stroke:#cccccc,stroke-dasharray: 5 5
+    style F3 fill:#fafafa,stroke:#cccccc,stroke-dasharray: 5 5
+    style FOLD fill:#ffffff,stroke:#bbbbbb
 ```
 
 ## Espaço de busca (Otimização Bayesiana)
@@ -119,5 +112,3 @@ O modelo final é estruturado como um fluxo sequencial que encapsula a seleção
 ## Entradas e Saídas
 - **Entradas**: Configurações de busca e conjuntos de dados espectrais.
 - **Saídas**: Melhores modelos candidatos e relatório de métricas de treinamento.
-
-
