@@ -26,8 +26,8 @@ flowchart TB
     end
 
     C --> D
-    G -- "Não selecionadas" --> H[/Treinamento da classe<br/>(80%)/]
-    G -- Selecionadas --> I[/Validação da classe<br/>(20%)/]
+    G -- "Não selecionadas" --> H[/"Treinamento da classe<br/>(80%)"/]
+    G -- Selecionadas --> I[/"Validação da classe<br/>(20%)"/]
     H --> J([Fim])
     I --> J
 
