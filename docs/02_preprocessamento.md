@@ -5,8 +5,8 @@ config:
   look: classic
   flowchart:
     curve: basis
-    nodeSpacing: 42
-    rankSpacing: 47
+    nodeSpacing: 32
+    rankSpacing: 36
 ---
 flowchart TB
     subgraph PIPE["Pipeline de pré-processamento"]

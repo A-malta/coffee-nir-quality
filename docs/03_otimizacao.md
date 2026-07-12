@@ -5,13 +5,12 @@ config:
   look: classic
   flowchart:
     curve: basis
-    nodeSpacing: 36
-    rankSpacing: 42
+    nodeSpacing: 32
+    rankSpacing: 36
 ---
 flowchart TD
     A([Início da etapa]) --> B[/Dados de treinamento<br/>espectros e classes/]
-    B --> C[[Grid Search:<br/>Exploração do espaço de<br/>hiperparâmetros]]
-    C --> D[[Otimização Bayesiana<br/>Algoritmo Optuna]]
+    B --> D[[Otimização Bayesiana<br/>Algoritmo Optuna]]
     D --> E{Validação Cruzada<br/>Stratified K-Fold}
 
     E -- "Repetição por fold" --> F[/Subconjunto de Validação/]
@@ -40,7 +39,7 @@ flowchart TD
 
     class A,Q terminador
     class B,F,G,K,M,P dados
-    class C,D,H,I,J,L,N,O processo
+    class D,H,I,J,L,N,O processo
     class E decisao
 
     linkStyle default stroke:#7AA695,stroke-width:2px
