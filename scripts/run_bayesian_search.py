@@ -8,7 +8,13 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from tqdm import tqdm
 
-from src.config import BAYESIAN_SEARCH_RESULTS_FILE, MODELS_DIR, RAW_PREPROCESS_NAME
+from src.config import (
+    BAYESIAN_SEARCH_RESULTS_FILE,
+    DATA_DIR,
+    MODELS_DIR,
+    RAW_PREPROCESS_NAME,
+    WAVELENGTH_COLUMN,
+)
 from src.data.dataset import load_modeling_dataset
 from src.evaluation.metrics import evaluate_model, min_class_recall_score
 from src.modeling.feature_selection import LassoFeatureSelector
@@ -84,6 +90,24 @@ def sorted_candidates(candidates):
 
 def save_results(results, path):
     results.to_csv(path, index=False)
+
+
+def feature_selection_table(feature_names, selector):
+    return pd.DataFrame(
+        {
+            WAVELENGTH_COLUMN: feature_names,
+            "selected": selector.support_.astype(np.uint8),
+        }
+    )
+
+
+def feature_selection_path(preprocess):
+    dataset_name = "raw" if preprocess == RAW_PREPROCESS_NAME else f"processed_{preprocess}"
+    return DATA_DIR / f"lasso_features_{dataset_name}.xlsx"
+
+
+def save_feature_selection(preprocess, selection):
+    selection.to_excel(feature_selection_path(preprocess), index=False)
 
 
 def lasso_selector(search_config):
@@ -211,6 +235,8 @@ def save_top_models(candidates, search_config):
 def optimize_preprocess(preprocess, search_config):
     X_train, y_train = load_modeling_dataset("training", preprocess)
     search_selector, X_train_selected, cv = prepare_search_data(X_train, y_train, search_config)
+    selection = feature_selection_table(X_train.columns, search_selector)
+    save_feature_selection(preprocess, selection)
     study = run_optuna_search(preprocess, X_train_selected, y_train, cv, search_config)
     return [
         {

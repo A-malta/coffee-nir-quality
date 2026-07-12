@@ -12,6 +12,7 @@ Ao executar `python main.py`, o projeto roda cinco etapas:
 
 1. **Split treino/validação (`src/data/splitter.py`)**
    - Lê espectros e qualidade sensorial.
+   - Converte o eixo espectral inicial para comprimento de onda em nm quando o arquivo vem em número de onda.
    - Alinha as classes da coluna `Class` às amostras espectrais.
    - Separa aproximadamente 80% para treino e 20% para validação.
    - Mantém a validação estratificada por classe.
@@ -33,10 +34,12 @@ Ao executar `python main.py`, o projeto roda cinco etapas:
 3. **Visualização de espectros (`scripts/plot.py`)**
    - Lê os arquivos brutos de espectros e qualidade sensorial.
    - Lê os espectros pré-processados gerados na etapa anterior.
-   - Gera um gráfico dos espectros brutos e um gráfico para cada versão pré-processada.
+   - Gera gráficos dos espectros brutos e pré-processados coloridos por nota e por classe.
    - Salva as figuras em:
      - `plots/espectros_nir_brutos.png`
+     - `plots/espectros_nir_brutos_por_classe.png`
      - `plots/espectros_nir_preprocessados_SG_1D+MeanCentering.png`
+     - `plots/espectros_nir_preprocessados_SG_1D+MeanCentering_por_classe.png`
 
 4. **Busca bayesiana (`scripts/run_bayesian_search.py`)**
    - Lê a recipe YAML informada na execução da pipeline.
@@ -51,6 +54,9 @@ Ao executar `python main.py`, o projeto roda cinco etapas:
    - Salva:
      - modelos em `models/*.joblib`
      - métricas em `resultados_bayesian_search_treinamento.csv`
+     - seleção dos dados brutos em `data/lasso_features_raw.xlsx`
+     - seleção dos dados processados em `data/lasso_features_processed_SG_1D+MeanCentering.xlsx`
+   - Nas duas planilhas, cada comprimento de onda recebe `1` quando mantido e `0` quando removido pelo LASSO.
    - O CSV inclui `cv_score`, hiperparâmetros, métricas no treino, seletor usado, quantidade de features selecionadas e nome do arquivo do modelo.
 
 5. **Validação final (`scripts/run_validation.py`)**
@@ -105,6 +111,8 @@ python main.py \
 
 - `data/raw_split/`: espectros e qualidade separados em treino e validação.
 - `data/processed/`: espectros pré-processados para treino e validação.
+- `data/lasso_features_raw.xlsx`: features mantidas (`1`) e removidas (`0`) nos dados brutos.
+- `data/lasso_features_processed_SG_1D+MeanCentering.xlsx`: features mantidas (`1`) e removidas (`0`) nos dados processados.
 - `plots/`: gráficos dos espectros brutos e pré-processados.
 - `models/`: modelos treinados em formato `.joblib`.
 - `resultados_bayesian_search_treinamento.csv`: ranking e métricas dos modelos salvos após a busca.

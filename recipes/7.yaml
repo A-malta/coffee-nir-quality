@@ -5,28 +5,28 @@ model:
     cv_folds: 5
     scoring: min_class_recall
     direction: maximize
-    save_top_models: 20
+    save_top_models: 50
     space:
       n_estimators:
-        low: 300
-        high: 700
+        low: 350
+        high: 450
         step: 50
       max_depth:
-        low: 8
+        low: 14
         high: 15
         step: 1
       min_samples_split:
-        low: 8
-        high: 20
+        low: 10
+        high: 19
         step: 1
       min_samples_leaf:
         low: 1
-        high: 8
+        high: 2
         step: 1
       max_features:
-        low: 0.1
-        high: 0.6
-      bootstrap: [false, true]
+        low: 0.2
+        high: 0.35
+      bootstrap: [false]
     feature_selection:
       lasso:
         enabled: true

@@ -13,6 +13,7 @@ RAW_SPECTRA_SHEET = "RawSpectra_RoastedCoffee"
 QUALITY_SHEET = "Cup quality_RoastedCoffee"
 CLASS_TARGET_COLUMN = "Class"
 SCORE_TARGET_COLUMN = "Cup quality (points)"
+WAVELENGTH_COLUMN = "Wavelength (nm)"
 
 RAW_PREPROCESS_NAME = "Raw"
 BAYESIAN_SEARCH_RESULTS_FILE = Path("resultados_bayesian_search_treinamento.csv")

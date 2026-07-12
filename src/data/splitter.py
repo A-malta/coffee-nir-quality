@@ -1,12 +1,13 @@
 import numpy as np
 import pandas as pd
 
-from src.config import CLASS_TARGET_COLUMN, RAW_SPLIT_DIR
+from src.config import CLASS_TARGET_COLUMN, RAW_SPLIT_DIR, WAVELENGTH_COLUMN
 from src.data.dataset import aligned_column, load_quality_table, load_raw_spectra
 from .kennard_stone import kennard_stone
 
 
 def save_spectra(wavelengths, spectra, idx, name):
+    wavelengths = pd.Series(wavelengths, name=WAVELENGTH_COLUMN)
     out = pd.concat([wavelengths, spectra[[spectra.columns[i] for i in idx]]], axis=1)
     out.to_excel(RAW_SPLIT_DIR / name, index=False)
 

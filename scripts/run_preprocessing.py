@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.config import PROCESSED_DIR, RAW_SPLIT_DIR
+from src.config import PROCESSED_DIR, RAW_SPLIT_DIR, WAVELENGTH_COLUMN
 from src.data.dataset import load_split_spectra
 from src.preprocessing.spectra import PREPROCESS_FILE, mean_centering, preprocess_spectra
 
@@ -8,7 +8,7 @@ from src.preprocessing.spectra import PREPROCESS_FILE, mean_centering, preproces
 def save_processed_spectra(wavelengths, X, split):
     path = PROCESSED_DIR / split / PREPROCESS_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
-    pd.concat([pd.Series(wavelengths, name="Wavenumbers"), X], axis=1).to_excel(path, index=False)
+    pd.concat([pd.Series(wavelengths, name=WAVELENGTH_COLUMN), X], axis=1).to_excel(path, index=False)
 
 
 def preprocess_data(wavelengths, X_train_raw, X_val_raw):
