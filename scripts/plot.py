@@ -1,39 +1,55 @@
-from pathlib import Path
+import matplotlib
 
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from src.config import PLOTS_DIR, PROCESSED_DIR, RAW_SPLIT_DIR
-from src.data.dataset import aligned_quality_scores, load_quality_table, load_raw_spectra, load_split_spectra
-from src.preprocessing.spectra import PREPROCESSING_VARIANTS, PreprocessingVariant
+from src.data.dataset import (
+    aligned_quality_classes,
+    aligned_quality_scores,
+    load_quality_table,
+    load_raw_spectra,
+    load_split_spectra,
+)
+from src.preprocessing.spectra import PREPROCESS_FILE, PREPROCESS_NAME
+
+
+CLASS_COLORS = {
+    "muito-bom": "#1f77b4",
+    "muito bom": "#1f77b4",
+    "very good": "#1f77b4",
+    "excelente": "#d62728",
+    "excellent": "#d62728",
+}
+DEFAULT_CLASS_COLOR = "#7f7f7f"
+FIGSIZE = (10, 6)
+TITLE_FONT_SIZE = 10
+LABEL_FONT_SIZE = 9
+TICK_FONT_SIZE = 8
+LEGEND_FONT_SIZE = 8
+
+
+def normalized_class_name(label):
+    return str(label).strip().casefold().replace("_", "-")
 
 
 def plot_spectra_by_score(
-    wavelengths: np.ndarray | pd.Series,
-    spectra: pd.DataFrame,
-    scores: np.ndarray | pd.Series,
-    output_path: Path,
-    title: str,
-    ylabel: str,
-) -> None:
-    """Plota espectros coloridos pela nota de qualidade sensorial.
-
-    Args:
-        wavelengths: Comprimentos de onda usados no eixo x.
-        spectra: Matriz de espectros, com uma amostra por coluna.
-        scores: Notas sensoriais alinhadas às colunas de ``spectra``.
-        output_path: Caminho onde a figura será salva.
-        title: Título do gráfico.
-        ylabel: Rótulo do eixo y.
-    """
+    wavelengths,
+    spectra,
+    scores,
+    output_path,
+    title,
+    ylabel,
+):
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     scores = np.asarray(scores)
     cmap = plt.get_cmap("viridis")
     norm = plt.Normalize(scores.min(), scores.max())
 
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=FIGSIZE)
     for idx, column in enumerate(spectra.columns):
         ax.plot(
             wavelengths,
@@ -43,30 +59,84 @@ def plot_spectra_by_score(
             linewidth=0.8,
         )
 
-    ax.set_title(title)
-    ax.set_xlabel("Wavenumber")
-    ax.set_ylabel(ylabel)
-    ax.invert_xaxis()
+    ax.set_title(title, fontsize=TITLE_FONT_SIZE)
+    ax.set_xlabel("Wavelength (nm)", fontsize=LABEL_FONT_SIZE)
+    ax.set_ylabel(ylabel, fontsize=LABEL_FONT_SIZE)
+    ax.tick_params(axis="both", labelsize=TICK_FONT_SIZE)
 
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
-    fig.colorbar(sm, ax=ax, label="Nota de Café (Pontos)")
+    colorbar = fig.colorbar(sm, ax=ax, label="Nota de Café (Pontos)", pad=0.02)
+    colorbar.ax.yaxis.label.set_size(LABEL_FONT_SIZE)
+    colorbar.ax.tick_params(labelsize=TICK_FONT_SIZE)
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
 
 
-def plot_raw_spectra(spectra_file: Path, quality_file: Path) -> None:
-    """Gera o gráfico dos espectros NIR brutos.
+def plot_spectra_by_class(
+    wavelengths,
+    spectra,
+    classes,
+    output_path,
+    title,
+    ylabel,
+):
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    Args:
-        spectra_file: Caminho do arquivo Excel com os espectros brutos.
-        quality_file: Caminho do arquivo Excel com a qualidade sensorial.
-    """
+    classes = pd.Series(classes, index=spectra.columns)
+
+    fig, ax = plt.subplots(figsize=FIGSIZE)
+    labels_by_key = {}
+    for column in spectra.columns:
+        label = classes[column]
+        class_key = normalized_class_name(label)
+        labels_by_key.setdefault(class_key, str(label))
+        ax.plot(
+            wavelengths,
+            spectra[column],
+            color=CLASS_COLORS.get(class_key, DEFAULT_CLASS_COLOR),
+            alpha=0.7,
+            linewidth=0.8,
+        )
+
+    ax.set_title(title, fontsize=TITLE_FONT_SIZE)
+    ax.set_xlabel("Wavelength (nm)", fontsize=LABEL_FONT_SIZE)
+    ax.set_ylabel(ylabel, fontsize=LABEL_FONT_SIZE)
+    ax.tick_params(axis="both", labelsize=TICK_FONT_SIZE)
+
+    handles = [
+        plt.Line2D(
+            [0],
+            [0],
+            color=CLASS_COLORS.get(class_key, DEFAULT_CLASS_COLOR),
+            linewidth=1.5,
+            label=label,
+        )
+        for class_key, label in labels_by_key.items()
+    ]
+    ax.legend(
+        handles=handles,
+        title="Classe",
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.1),
+        ncol=len(handles),
+        frameon=False,
+        fontsize=LEGEND_FONT_SIZE,
+        title_fontsize=LEGEND_FONT_SIZE,
+    )
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+
+def plot_raw_spectra(spectra_file, quality_file):
     wavelengths, X_raw = load_raw_spectra(spectra_file)
     quality_df = load_quality_table(quality_file)
     scores = aligned_quality_scores(quality_df, X_raw.columns.tolist())
+    classes = aligned_quality_classes(quality_df, X_raw.columns.tolist())
     plot_spectra_by_score(
         wavelengths=wavelengths,
         spectra=X_raw,
@@ -75,16 +145,19 @@ def plot_raw_spectra(spectra_file: Path, quality_file: Path) -> None:
         title="Espectros NIR Brutos",
         ylabel="Absorbância",
     )
+    plot_spectra_by_class(
+        wavelengths=wavelengths,
+        spectra=X_raw,
+        classes=classes,
+        output_path=PLOTS_DIR / "espectros_nir_brutos_por_classe.png",
+        title="Espectros NIR Brutos por Classe",
+        ylabel="Absorbância",
+    )
 
 
-def plot_processed_spectra(variant: PreprocessingVariant) -> None:
-    """Gera o gráfico de uma variante de espectros pré-processados.
-
-    Args:
-        variant: Variante de pré-processamento que será carregada e plotada.
-    """
-    wavelengths, X_train = load_split_spectra(PROCESSED_DIR / "training" / variant.file_name)
-    _, X_val = load_split_spectra(PROCESSED_DIR / "validation" / variant.file_name)
+def plot_processed_spectra():
+    wavelengths, X_train = load_split_spectra(PROCESSED_DIR / "training" / PREPROCESS_FILE)
+    _, X_val = load_split_spectra(PROCESSED_DIR / "validation" / PREPROCESS_FILE)
 
     quality_train = pd.read_excel(RAW_SPLIT_DIR / "training_quality.xlsx")
     quality_val = pd.read_excel(RAW_SPLIT_DIR / "validation_quality.xlsx")
@@ -92,18 +165,26 @@ def plot_processed_spectra(variant: PreprocessingVariant) -> None:
 
     spectra = pd.concat([X_train, X_val], axis=1)
     scores = aligned_quality_scores(quality, spectra.columns.tolist())
+    classes = aligned_quality_classes(quality, spectra.columns.tolist())
 
     plot_spectra_by_score(
         wavelengths=wavelengths,
         spectra=spectra,
         scores=scores,
-        output_path=PLOTS_DIR / f"espectros_nir_preprocessados_{variant.name}.png",
-        title=f"Espectros NIR Pré-processados - {variant.name}",
+        output_path=PLOTS_DIR / f"espectros_nir_preprocessados_{PREPROCESS_NAME}.png",
+        title=f"Espectros NIR Pré-processados - {PREPROCESS_NAME}",
+        ylabel="Sinal Normalizado",
+    )
+    plot_spectra_by_class(
+        wavelengths=wavelengths,
+        spectra=spectra,
+        classes=classes,
+        output_path=PLOTS_DIR / f"espectros_nir_preprocessados_{PREPROCESS_NAME}_por_classe.png",
+        title=f"Espectros NIR Pré-processados por Classe - {PREPROCESS_NAME}",
         ylabel="Sinal Normalizado",
     )
 
 
-def main(spectra_file: Path, quality_file: Path) -> None:
+def run_plot(spectra_file, quality_file):
     plot_raw_spectra(spectra_file, quality_file)
-    for variant in PREPROCESSING_VARIANTS:
-        plot_processed_spectra(variant)
+    plot_processed_spectra()
