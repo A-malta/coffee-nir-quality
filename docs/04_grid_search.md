@@ -5,8 +5,8 @@ config:
   look: classic
   flowchart:
     curve: basis
-    nodeSpacing: 42
-    rankSpacing: 50
+    nodeSpacing: 36
+    rankSpacing: 42
 ---
 flowchart TD
     A([Início da etapa]) --> B[/Dados de treinamento<br/>espectros e classes/]

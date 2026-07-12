@@ -5,8 +5,8 @@ config:
   look: classic
   flowchart:
     curve: basis
-    nodeSpacing: 38
-    rankSpacing: 42
+    nodeSpacing: 32
+    rankSpacing: 36
 ---
 flowchart TB
     A([Início]) --> B[/Espectros NIR brutos<br/>&amp; Qualidade Sensorial/]

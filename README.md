@@ -31,8 +31,8 @@ config:
   look: classic
   flowchart:
     curve: basis
-    nodeSpacing: 50
-    rankSpacing: 58
+    nodeSpacing: 42
+    rankSpacing: 50
 ---
 flowchart TD
     A([Início da pipeline]) --> B[/Dados iniciais<br/>espectros NIR e qualidade<br/>sensorial/]
@@ -115,8 +115,8 @@ config:
   look: classic
   flowchart:
     curve: basis
-    nodeSpacing: 38
-    rankSpacing: 42
+    nodeSpacing: 32
+    rankSpacing: 36
 ---
 flowchart TB
     A([Início]) --> B[/Espectros NIR brutos<br/>&amp; Qualidade Sensorial/]
@@ -166,8 +166,8 @@ config:
   look: classic
   flowchart:
     curve: basis
-    nodeSpacing: 50
-    rankSpacing: 55
+    nodeSpacing: 42
+    rankSpacing: 47
 ---
 flowchart TB
     subgraph PIPE["Pipeline de pré-processamento"]
@@ -213,6 +213,18 @@ O tratamento `SG_1D+MeanCentering` aplica Savitzky-Golay com janela 15, polinôm
 
 A visualização gera quatro gráficos: espectros brutos e pré-processados, coloridos por pontuação sensorial e por classe.
 
+#### Visualizações dos espectros
+
+As figuras complementares são exibidas aqui para permitir a comparação direta entre os dados brutos e pré-processados.
+
+| Espectros brutos por pontuação sensorial | Espectros brutos por classe |
+|:---:|:---:|
+| ![Espectros NIR brutos coloridos pela pontuação sensorial](docs/figura-06_espectros_nir_brutos.png) | ![Espectros NIR brutos coloridos pela classe sensorial](docs/figura-07_espectros_nir_brutos_por_classe.png) |
+
+| Espectros pré-processados por pontuação sensorial | Espectros pré-processados por classe |
+|:---:|:---:|
+| ![Espectros NIR pré-processados coloridos pela pontuação sensorial](docs/figura-08_espectros_nir_preprocessados.png) | ![Espectros NIR pré-processados coloridos pela classe sensorial](docs/figura-09_espectros_nir_preprocessados_por_classe.png) |
+
 ### 3. Seleção de variáveis e otimização
 
 ```mermaid
@@ -222,8 +234,8 @@ config:
   look: classic
   flowchart:
     curve: basis
-    nodeSpacing: 42
-    rankSpacing: 50
+    nodeSpacing: 36
+    rankSpacing: 42
 ---
 flowchart TD
     A([Início da etapa]) --> B[/Dados de treinamento<br/>espectros e classes/]
@@ -331,13 +343,11 @@ O melhor modelo apresentado no trabalho foi obtido na segunda repetição e alca
 
 Como a busca, o LASSO e o Random Forest são executados sem *seed*, novas execuções podem produzir métricas e seleções de variáveis diferentes desse valor de referência.
 
-## Documentação complementar
+## Fluxogramas em arquivos separados
 
-Os fluxogramas incorporados neste README também estão disponíveis isoladamente:
+Os fluxogramas exibidos neste README também estão disponíveis isoladamente:
 
 - [pipeline geral](docs/00_pipeline_geral.md);
 - [divisão dos dados](docs/01_divisao_dados.md);
 - [pré-processamento](docs/02_preprocessamento.md);
 - [otimização e validação cruzada](docs/04_grid_search.md).
-
-As Figuras [6](docs/figura-06_espectros_nir_brutos.png), [7](docs/figura-07_espectros_nir_brutos_por_classe.png), [8](docs/figura-08_espectros_nir_preprocessados.png) e [9](docs/figura-09_espectros_nir_preprocessados_por_classe.png) permitem comparar os espectros brutos e pré-processados sem expor os resultados tabulares completos das execuções.

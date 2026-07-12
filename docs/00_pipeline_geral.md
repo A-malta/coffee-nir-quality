@@ -5,8 +5,8 @@ config:
   look: classic
   flowchart:
     curve: basis
-    nodeSpacing: 50
-    rankSpacing: 58
+    nodeSpacing: 42
+    rankSpacing: 50
 ---
 flowchart TD
     A([Início da pipeline]) --> B[/Dados iniciais<br/>espectros NIR e qualidade<br/>sensorial/]
