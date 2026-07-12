@@ -1,0 +1,22 @@
+[project]
+name = "coffee-nir-quality"
+version = "0.1.0"
+description = "Pipeline para classificação da qualidade de cafés especiais por espectroscopia NIR"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "joblib>=1.3.0",
+    "matplotlib>=3.7.0",
+    "numpy>=1.24.0",
+    "openpyxl>=3.1.0",
+    "optuna>=3.0.0",
+    "pandas>=2.0.0",
+    "pyyaml>=6.0.0",
+    "scikit-learn>=1.8.0,<2.0",
+    "scipy>=1.10.0",
+    "seaborn>=0.12.0",
+    "tqdm>=4.65.0",
+]
+
+[tool.uv]
+package = false

@@ -34,7 +34,7 @@ dist/
 /resultados_validacao_final.csv
 *.joblib
 
-# Cópias locais completas; o recorte publicável está em resultados_tcc/
+# Cópias locais completas e artefatos históricos não versionados
 /resultados/
 /resultados da pipeline/
 /pipeline/

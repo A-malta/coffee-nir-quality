@@ -4,6 +4,24 @@ Pipeline desenvolvida para o TCC **Classificação de Cafés Especiais da Regiã
 
 O projeto classifica amostras de café torrado e moído nas classes sensoriais `muito_bom` e `excelente` a partir de espectros FT-NIR. A implementação reúne divisão representativa dos dados, pré-processamento espectral, seleção de variáveis, otimização de Random Forest e validação em um conjunto reservado.
 
+## Execução rápida
+
+O projeto usa Python 3.12 e [`uv`](https://docs.astral.sh/uv/getting-started/installation/) para criar o ambiente e instalar exatamente as versões registradas em `uv.lock`.
+
+```bash
+git clone https://github.com/A-malta/coffee-nir-quality.git
+cd coffee-nir-quality
+uv sync --locked
+```
+
+Execute a pipeline completa a partir da raiz do repositório:
+
+```bash
+uv run --locked python main.py --spectra-file data/RawSpectra_RoastedCoffee.xlsx --quality-file data/SensoryQuality_RoastedCoffee.xlsx --recipe recipes/01.yaml
+```
+
+Uma chamada executa uma repetição completa. A configuração oficial realiza 1.000 tentativas para os espectros brutos e outras 1.000 para os pré-processados, com cinco *folds* por tentativa; portanto, o processamento pode ser demorado.
+
 ## Visão geral da pipeline
 
 ```mermaid
@@ -52,6 +70,23 @@ flowchart TD
 
 A execução é coordenada por `main.py` e percorre cinco etapas: divisão dos dados, pré-processamento, visualização, busca bayesiana e validação final.
 
+## Estrutura do repositório
+
+```text
+.
+├── data/                 # planilhas de entrada versionadas
+├── docs/                 # fluxogramas Mermaid e figuras selecionadas do TCC
+├── recipes/01.yaml       # configuração executável da busca
+├── scripts/              # orquestração das etapas da pipeline
+├── src/                  # dados, pré-processamento, modelagem e métricas
+├── main.py               # ponto de entrada
+├── .python-version       # versão padrão do Python usada pelo uv
+├── pyproject.toml        # metadados e dependências diretas
+└── uv.lock               # versões exatas resolvidas pelo uv
+```
+
+Os diretórios de dados intermediários, modelos, gráficos e métricas são criados durante a execução e permanecem fora do versionamento.
+
 ## Dados versionados
 
 Os arquivos de entrada estão em `data/`:
@@ -67,7 +102,7 @@ Para adequação à pipeline, os cabeçalhos espectrais foram consolidados, os i
 
 A pipeline utiliza a coluna `Class` como variável resposta. Quando o eixo espectral está em número de onda, ele é convertido para comprimento de onda, cobrindo aproximadamente 833 a 2.500 nm.
 
-> **Nota de reprodutibilidade:** a planilha versionada contém 114 espectros `muito_bom` e 78 `excelente`. O texto e a Tabela 1 do TCC informam 111 e 81, respectivamente. A divisão e as métricas arquivadas correspondem aos dados versionados: 153 espectros de treinamento e 39 de validação, enquanto o texto do TCC informa 154 e 38.
+> **Nota de reprodutibilidade:** a planilha versionada contém 114 espectros `muito_bom` e 78 `excelente`. O texto e a Tabela 1 do TCC informam 111 e 81, respectivamente. A divisão e os resultados de referência correspondem aos dados versionados: 153 espectros de treinamento e 39 de validação, enquanto o texto do TCC informa 154 e 38.
 
 ## Partes principais
 
@@ -240,7 +275,7 @@ São calculadas acurácia, precisão, *recall*, especificidade e métricas balan
 
 ## Recipe do TCC
 
-O repositório mantém uma única configuração executável: [`recipes/tcc.yaml`](recipes/tcc.yaml).
+O repositório mantém uma única configuração executável: [`recipes/01.yaml`](recipes/01.yaml).
 
 | Parâmetro | Configuração |
 |---|---|
@@ -258,33 +293,20 @@ O repositório mantém uma única configuração executável: [`recipes/tcc.yaml
 
 O TCC não informa numericamente a quantidade de tentativas, o número de folds, `C`, limiar, tolerância ou iterações do LASSO. Esses valores estão identificados no YAML como *defaults* operacionais históricos, e não como valores extraídos do texto.
 
-## Instalação
+## Ambiente e dependências
 
-Requer Python 3.12. Na raiz do repositório:
+[`pyproject.toml`](pyproject.toml) é a fonte das dependências diretas e [`uv.lock`](uv.lock) fixa toda a resolução para instalações reproduzíveis. O arquivo [`.python-version`](.python-version) orienta o `uv` a usar Python 3.12; não é necessário criar ou ativar um ambiente virtual manualmente.
 
-```bash
-python3 -m venv venv
-source venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-No Windows PowerShell, ative o ambiente com `venv\Scripts\Activate.ps1`.
-
-## Como executar
-
-Execute a pipeline completa a partir da raiz:
+Para conferir se o lock está atualizado e sincronizar o ambiente:
 
 ```bash
-python main.py \
-  --spectra-file data/RawSpectra_RoastedCoffee.xlsx \
-  --quality-file data/SensoryQuality_RoastedCoffee.xlsx \
-  --recipe recipes/tcc.yaml
+uv lock --check
+uv sync --locked
 ```
 
-A recipe executa 2.000 tentativas no total — 1.000 para dados brutos e 1.000 para dados pré-processados — com cinco folds por tentativa. O tempo de execução depende do processador e pode ser elevado.
+Ao adicionar ou remover uma biblioteca, use `uv add <pacote>` ou `uv remove <pacote>` para manter `pyproject.toml` e `uv.lock` consistentes.
 
-Uma chamada de `main.py` produz uma execução. O TCC utilizou cinco execuções sem *seed*; para repeti-las, execute o comando cinco vezes e preserve as saídas antes da chamada seguinte, pois os caminhos da raiz são reutilizados.
+O protocolo experimental do TCC utilizou cinco execuções sem *seed*. Caso queira repetir esse protocolo, preserve as saídas de cada execução antes de iniciar a seguinte, pois os mesmos caminhos são reutilizados.
 
 ## Saídas de uma execução
 
@@ -299,24 +321,27 @@ Uma chamada de `main.py` produz uma execução. O TCC utilizou cinco execuções
 | `resultados_validacao_final.csv` | Métricas dos quatro modelos no conjunto reservado, preservando `cv_rank`, `cv_score` e ranking final |
 | `confusion_matrices/` | Quatro matrizes de confusão normalizadas |
 
-## Resultados apresentados no TCC
+## Resultado de referência
 
-O recorte versionado está em [`resultados_tcc/`](resultados_tcc/):
+O README apresenta apenas um resumo do resultado reportado no TCC. Os CSVs, planilhas de seleção e modelos das cinco execuções históricas não são versionados; cada pessoa gera seus próprios artefatos ao executar a pipeline.
 
-- `rep_01/` a `rep_05/`: CSVs de treinamento e validação e planilhas de seleção LASSO;
-- `figuras/`: Figuras 6–9 e 11 apresentadas no TCC;
-- modelos `.joblib`, espectros intermediários e arquivos duplicados não são versionados.
-
-O melhor modelo apresentado foi obtido na segunda repetição e alcançou:
+O melhor modelo apresentado no trabalho foi obtido na segunda repetição e alcançou:
 
 | Acurácia | Precisão | Recall | Especificidade | Balanced accuracy |
 |---:|---:|---:|---:|---:|
 | 0,769 | 0,772 | 0,769 | 0,766 | 0,766 |
 
-![Matriz de confusão normalizada do melhor modelo Random Forest](resultados_tcc/figuras/figura-11_matriz_confusao_melhor_modelo.png)
+![Matriz de confusão normalizada do melhor modelo Random Forest](docs/figura-11_matriz_confusao_melhor_modelo.png)
 
-### Proveniência dos snapshots
+Como a busca, o LASSO e o Random Forest são executados sem *seed*, novas execuções podem produzir métricas e seleções de variáveis diferentes desse valor de referência.
 
-Os arquivos em `resultados_tcc/` preservam as execuções históricas usadas nas tabelas e figuras. Nelas, foram armazenados 50 candidatos por repetição e a Tabela 5 foi formada pelos quatro primeiros do ranking no conjunto reservado. A recipe atualmente versionada segue o procedimento escrito nas Seções 4.5 e 4.6: dez modelos finais e escolha dos quatro por `cv_score`. Por isso, uma nova execução não reproduzirá esses snapshots byte a byte.
+## Documentação complementar
 
-Os fontes Mermaid dos quatro fluxogramas também estão isolados em [`docs/fluxogramas/`](docs/fluxogramas/).
+Os fluxogramas incorporados neste README também estão disponíveis isoladamente:
+
+- [pipeline geral](docs/00_pipeline_geral.md);
+- [divisão dos dados](docs/01_divisao_dados.md);
+- [pré-processamento](docs/02_preprocessamento.md);
+- [otimização e validação cruzada](docs/04_grid_search.md).
+
+As Figuras [6](docs/figura-06_espectros_nir_brutos.png), [7](docs/figura-07_espectros_nir_brutos_por_classe.png), [8](docs/figura-08_espectros_nir_preprocessados.png) e [9](docs/figura-09_espectros_nir_preprocessados_por_classe.png) permitem comparar os espectros brutos e pré-processados sem expor os resultados tabulares completos das execuções.
