@@ -1,7 +1,14 @@
-import pandas as pd
 import os
 
-def filter_results():
+import pandas as pd
+
+
+def filter_results() -> None:
+    """Mantém na busca bayesiana apenas modelos presentes na validação.
+
+    A função sobrescreve o CSV da busca bayesiana com as linhas cujos
+    modelos também aparecem no CSV de validação final.
+    """
     bayesian_file = 'resultados_bayesian_search_treinamento.csv'
     validation_file = 'resultados_validacao_final.csv'
     
@@ -25,6 +32,7 @@ def filter_results():
     
     df_filtered.to_csv(bayesian_file, index=False)
     print(f"Successfully saved filtered results to {bayesian_file}")
+
 
 if __name__ == "__main__":
     filter_results()

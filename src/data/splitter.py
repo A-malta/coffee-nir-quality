@@ -1,24 +1,63 @@
+from collections.abc import Hashable, Sequence
+from os import PathLike
+
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
 
 from src.config import CLASS_TARGET_COLUMN, RAW_SPLIT_DIR, WAVELENGTH_COLUMN
 from src.data.dataset import aligned_column, load_quality_table, load_raw_spectra
 from .kennard_stone import kennard_stone
 
 
-def save_spectra(wavelengths, spectra, idx, name):
+def save_spectra(
+    wavelengths: ArrayLike,
+    spectra: pd.DataFrame,
+    idx: Sequence[int],
+    name: str,
+) -> None:
+    """Salva os espectros selecionados em uma planilha da partição.
+
+    Args:
+        wavelengths: Eixo de comprimentos de onda dos espectros.
+        spectra: Tabela com uma amostra em cada coluna.
+        idx: Índices posicionais das amostras que serão salvas.
+        name: Nome do arquivo de saída dentro do diretório de partições.
+    """
     wavelengths = pd.Series(wavelengths, name=WAVELENGTH_COLUMN)
     out = pd.concat([wavelengths, spectra[[spectra.columns[i] for i in idx]]], axis=1)
     out.to_excel(RAW_SPLIT_DIR / name, index=False)
 
 
-def save_quality(quality, sample_ids, name):
+def save_quality(
+    quality: pd.DataFrame,
+    sample_ids: Sequence[Hashable],
+    name: str,
+) -> None:
+    """Salva os dados de qualidade das amostras selecionadas.
+
+    Args:
+        quality: Tabela original de atributos de qualidade.
+        sample_ids: Identificadores das amostras que serão salvas.
+        name: Nome do arquivo de saída dentro do diretório de partições.
+    """
     sample_col = quality.columns[0]
     out = pd.DataFrame({sample_col: sample_ids}).merge(quality, on=sample_col, how="left")
     out.to_excel(RAW_SPLIT_DIR / name, index=False)
 
 
-def run_split(spectra_file, quality_file, validation_ratio=0.2):
+def run_split(
+    spectra_file: str | PathLike[str],
+    quality_file: str | PathLike[str],
+    validation_ratio: float = 0.2,
+) -> None:
+    """Divide os dados em treino e validação de forma representativa por classe.
+
+    Args:
+        spectra_file: Caminho da planilha com os espectros brutos.
+        quality_file: Caminho da planilha com os dados de qualidade.
+        validation_ratio: Fração aproximada de cada classe destinada à validação.
+    """
     wavelengths, spectra = load_raw_spectra(spectra_file)
     quality = load_quality_table(quality_file)
     sample_ids = spectra.columns.tolist()

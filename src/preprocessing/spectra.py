@@ -2,7 +2,7 @@ import pandas as pd
 from scipy.signal import savgol_filter
 
 
-def mean_centering(X):
+def mean_centering(X: pd.DataFrame) -> pd.DataFrame:
     """Aplica mean centering aos espectros.
 
     Cada linha representa um comprimento de onda e cada coluna representa uma
@@ -20,7 +20,12 @@ def mean_centering(X):
     return X.sub(mu, axis=0)
 
 
-def savitzky_golay(X, window_length, polyorder, deriv):
+def savitzky_golay(
+    X: pd.DataFrame,
+    window_length: int,
+    polyorder: int,
+    deriv: int,
+) -> pd.DataFrame:
     """Aplica Savitzky-Golay aos espectros.
 
     Args:
@@ -28,6 +33,7 @@ def savitzky_golay(X, window_length, polyorder, deriv):
         window_length: Tamanho da janela do filtro.
         polyorder: Ordem do polinômio local.
         deriv: Ordem da derivada.
+
     Returns:
         DataFrame com os espectros filtrados.
     """
@@ -38,7 +44,15 @@ def savitzky_golay(X, window_length, polyorder, deriv):
 
 
 class PreprocessingVariant:
-    def __init__(self, name, file_name):
+    """Descreve uma variante disponível de pré-processamento espectral."""
+
+    def __init__(self, name: str, file_name: str) -> None:
+        """Inicializa os metadados da variante de pré-processamento.
+
+        Args:
+            name: Nome legível da variante.
+            file_name: Nome do arquivo utilizado para persistir o resultado.
+        """
         self.name = name
         self.file_name = file_name
 
@@ -55,9 +69,16 @@ PREPROCESS_FILE = PREPROCESSING_VARIANTS[0].file_name
 
 
 def preprocess_spectra(
-    X,
-):
-    """Aplica Savitzky-Golay com 1ª derivada aos espectros."""
+    X: pd.DataFrame,
+) -> pd.DataFrame:
+    """Aplica Savitzky-Golay com primeira derivada aos espectros.
+
+    Args:
+        X: DataFrame com uma amostra espectral em cada coluna.
+
+    Returns:
+        DataFrame com os espectros filtrados pela configuração do projeto.
+    """
     return savitzky_golay(
         X,
         window_length=15,

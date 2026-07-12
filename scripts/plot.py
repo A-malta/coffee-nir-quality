@@ -1,9 +1,13 @@
+from pathlib import Path
+
 import matplotlib
 
 matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
 
 from src.config import PLOTS_DIR, PROCESSED_DIR, RAW_SPLIT_DIR
 from src.data.dataset import (
@@ -31,18 +35,37 @@ TICK_FONT_SIZE = 8
 LEGEND_FONT_SIZE = 8
 
 
-def normalized_class_name(label):
+def normalized_class_name(label: object) -> str:
+    """Normaliza um rótulo de classe para uso como chave de cor.
+
+    Args:
+        label: Rótulo de classe a ser normalizado.
+
+    Returns:
+        Rótulo sem espaços externos, em minúsculas e com sublinhados
+        substituídos por hífens.
+    """
     return str(label).strip().casefold().replace("_", "-")
 
 
 def plot_spectra_by_score(
-    wavelengths,
-    spectra,
-    scores,
-    output_path,
-    title,
-    ylabel,
-):
+    wavelengths: ArrayLike,
+    spectra: pd.DataFrame,
+    scores: ArrayLike,
+    output_path: Path,
+    title: str,
+    ylabel: str,
+) -> None:
+    """Gera um gráfico de espectros coloridos pela pontuação sensorial.
+
+    Args:
+        wavelengths: Comprimentos de onda usados no eixo horizontal.
+        spectra: Espectros organizados em colunas, um por amostra.
+        scores: Pontuações sensoriais alinhadas às colunas de ``spectra``.
+        output_path: Caminho do arquivo de imagem a ser gerado.
+        title: Título do gráfico.
+        ylabel: Rótulo do eixo vertical.
+    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     scores = np.asarray(scores)
@@ -76,13 +99,23 @@ def plot_spectra_by_score(
 
 
 def plot_spectra_by_class(
-    wavelengths,
-    spectra,
-    classes,
-    output_path,
-    title,
-    ylabel,
-):
+    wavelengths: ArrayLike,
+    spectra: pd.DataFrame,
+    classes: ArrayLike,
+    output_path: Path,
+    title: str,
+    ylabel: str,
+) -> None:
+    """Gera um gráfico de espectros coloridos pela classe sensorial.
+
+    Args:
+        wavelengths: Comprimentos de onda usados no eixo horizontal.
+        spectra: Espectros organizados em colunas, um por amostra.
+        classes: Classes sensoriais alinhadas às colunas de ``spectra``.
+        output_path: Caminho do arquivo de imagem a ser gerado.
+        title: Título do gráfico.
+        ylabel: Rótulo do eixo vertical.
+    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     classes = pd.Series(classes, index=spectra.columns)
@@ -132,7 +165,13 @@ def plot_spectra_by_class(
     plt.close()
 
 
-def plot_raw_spectra(spectra_file, quality_file):
+def plot_raw_spectra(spectra_file: Path, quality_file: Path) -> None:
+    """Gera as visualizações dos espectros NIR brutos.
+
+    Args:
+        spectra_file: Planilha com os espectros brutos.
+        quality_file: Planilha com pontuações e classes sensoriais.
+    """
     wavelengths, X_raw = load_raw_spectra(spectra_file)
     quality_df = load_quality_table(quality_file)
     scores = aligned_quality_scores(quality_df, X_raw.columns.tolist())
@@ -155,7 +194,8 @@ def plot_raw_spectra(spectra_file, quality_file):
     )
 
 
-def plot_processed_spectra():
+def plot_processed_spectra() -> None:
+    """Gera as visualizações dos espectros NIR pré-processados."""
     wavelengths, X_train = load_split_spectra(PROCESSED_DIR / "training" / PREPROCESS_FILE)
     _, X_val = load_split_spectra(PROCESSED_DIR / "validation" / PREPROCESS_FILE)
 
@@ -185,6 +225,12 @@ def plot_processed_spectra():
     )
 
 
-def run_plot(spectra_file, quality_file):
+def run_plot(spectra_file: Path, quality_file: Path) -> None:
+    """Executa a geração de todas as visualizações espectrais.
+
+    Args:
+        spectra_file: Planilha com os espectros brutos.
+        quality_file: Planilha com pontuações e classes sensoriais.
+    """
     plot_raw_spectra(spectra_file, quality_file)
     plot_processed_spectra()

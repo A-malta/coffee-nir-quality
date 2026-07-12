@@ -1,23 +1,22 @@
 import numpy as np
+from numpy.typing import ArrayLike
 from scipy.spatial.distance import cdist
 from sklearn.preprocessing import StandardScaler
 
 
-def kennard_stone(X, n_samples):
+def kennard_stone(X: ArrayLike, n_samples: int) -> list[int]:
     """Seleciona amostras representativas pelo algoritmo Kennard-Stone dentro de cada classe.
 
-    - Padroniza a escala dos dados;
-    - Calcula as distâncias euclidianas entre todas as amostras;
-    - Começa selecionando as duas amostras mais distantes;
-    - Adiciona iterativamente a amostra mais distante do conjunto já selecionado;
-    - Retorna dos indices das amostras escolhidas.
+    Padroniza os atributos, inicia a seleção com as amostras mais distantes e
+    adiciona iterativamente a amostra com maior distância mínima em relação ao
+    conjunto já selecionado.
 
     Args:
         X: Matriz de dados com uma amostra por linha.
         n_samples: Quantidade de amostras a selecionar.
 
     Returns:
-        Índices das amostras selecionadas.
+        Lista de índices inteiros das amostras selecionadas.
     """
     if n_samples <= 0:
         return []

@@ -1,5 +1,10 @@
+import re
+from collections.abc import Hashable
+from typing import Any
+
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike, NDArray
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
@@ -7,10 +12,18 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
 )
-import re
 
 
-def _specificity_multiclass(y_true, y_pred):
+def _specificity_multiclass(y_true: ArrayLike, y_pred: ArrayLike) -> float:
+    """Calcula a especificidade média para um problema multiclasse.
+
+    Args:
+        y_true: Rótulos verdadeiros das amostras.
+        y_pred: Rótulos preditos pelo modelo.
+
+    Returns:
+        Média das especificidades um-contra-todos das classes válidas.
+    """
     cm = confusion_matrix(y_true, y_pred)
     total = cm.sum()
     specificities = []
@@ -28,13 +41,35 @@ def _specificity_multiclass(y_true, y_pred):
     return float(np.mean(specificities)) if specificities else 0.0
 
 
-def _slug(value):
+def _slug(value: Any) -> str:
+    """Converte um valor em um sufixo seguro para nomes de métricas.
+
+    Args:
+        value: Valor que identifica uma classe.
+
+    Returns:
+        Texto minúsculo composto por caracteres alfanuméricos e sublinhados.
+    """
     text = str(value).strip().lower()
     text = re.sub(r"[^0-9a-zA-Z]+", "_", text)
     return text.strip("_") or "classe"
 
 
-def _specificity_by_class(y_true, y_pred, labels):
+def _specificity_by_class(
+    y_true: NDArray[Any],
+    y_pred: NDArray[Any],
+    labels: NDArray[Any],
+) -> dict[Hashable, float]:
+    """Calcula a especificidade um-contra-todos de cada classe.
+
+    Args:
+        y_true: Array de rótulos verdadeiros.
+        y_pred: Array de rótulos preditos.
+        labels: Array ordenado de classes consideradas.
+
+    Returns:
+        Mapeamento entre cada classe e sua especificidade.
+    """
     cm = confusion_matrix(y_true, y_pred, labels=labels)
     total = cm.sum()
     specificities = {}
@@ -50,7 +85,21 @@ def _specificity_by_class(y_true, y_pred, labels):
     return specificities
 
 
-def _accuracy_by_class(y_true, y_pred, labels):
+def _accuracy_by_class(
+    y_true: NDArray[Any],
+    y_pred: NDArray[Any],
+    labels: NDArray[Any],
+) -> dict[Hashable, float]:
+    """Calcula a acurácia um-contra-todos de cada classe.
+
+    Args:
+        y_true: Array de rótulos verdadeiros.
+        y_pred: Array de rótulos preditos.
+        labels: Array ordenado de classes consideradas.
+
+    Returns:
+        Mapeamento entre cada classe e sua acurácia.
+    """
     accuracies = {}
 
     for label in labels:
@@ -61,7 +110,16 @@ def _accuracy_by_class(y_true, y_pred, labels):
     return accuracies
 
 
-def min_class_recall_score(y_true, y_pred):
+def min_class_recall_score(y_true: ArrayLike, y_pred: ArrayLike) -> float:
+    """Obtém o menor recall observado entre as classes verdadeiras.
+
+    Args:
+        y_true: Rótulos verdadeiros das amostras.
+        y_pred: Rótulos preditos pelo modelo.
+
+    Returns:
+        Menor valor de recall entre todas as classes presentes.
+    """
     y_true_arr = np.asarray(y_true)
     y_pred_arr = np.asarray(y_pred)
     labels = pd.Index(pd.Series(y_true_arr)).unique().to_numpy()
@@ -75,7 +133,16 @@ def min_class_recall_score(y_true, y_pred):
     return float(np.min(recalls))
 
 
-def evaluate_model(y_true, y_pred):
+def evaluate_model(y_true: ArrayLike, y_pred: ArrayLike) -> dict[str, float]:
+    """Calcula as métricas globais, balanceadas e específicas por classe.
+
+    Args:
+        y_true: Rótulos verdadeiros das amostras.
+        y_pred: Rótulos preditos pelo modelo.
+
+    Returns:
+        Dicionário com métricas agregadas e métricas um-contra-todos por classe.
+    """
     y_true_arr = np.asarray(y_true)
     y_pred_arr = np.asarray(y_pred)
     labels = pd.Index(pd.concat([pd.Series(y_true_arr), pd.Series(y_pred_arr)], ignore_index=True)).unique().to_numpy()
