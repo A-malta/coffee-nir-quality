@@ -312,7 +312,7 @@ O protocolo experimental do TCC utilizou cinco execuções sem *seed*. Caso quei
 | `data/processed/` | Matrizes espectrais após filtragem Savitzky–Golay de primeira derivada e centralização pela média, separadas por partição |
 | `data/lasso_features_*.xlsx` | Indicadores binários das variáveis espectrais selecionadas por regressão logística com regularização L1, ajustada no conjunto completo de treinamento para cada representação espectral |
 | `plots/` | Visualizações dos espectros brutos e pré-processados, com codificação por pontuação sensorial e por classe |
-| `models/` | Dez pipelines serializados em Joblib, compostos pelo seletor de variáveis L1 e pelo classificador Random Forest |
+| `models/` | Dez artefatos, compostos pelo seletor de variáveis L1 e pelo classificador Random Forest |
 | `resultados_bayesian_search_treinamento.csv` | Ranking dos modelos candidatos por `cv_score`, com hiperparâmetros, número de variáveis selecionadas e métricas de ajuste no treinamento |
 | `resultados_validacao_final.csv` | Métricas preditivas dos quatro modelos selecionados por validação cruzada e avaliados no conjunto de validação externa, incluindo `cv_rank`, `cv_score` e ranking final |
 | `confusion_matrices/` | Matrizes de confusão normalizadas por classe real para os quatro modelos avaliados na validação externa |
