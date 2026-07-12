@@ -1,6 +1,6 @@
 # Classificação de Cafés Especiais com NIR e Random Forest
 
-Pipeline desenvolvida para o TCC.
+Pipeline desenvolvida para o TCC **Classificação de Cafés Especiais da Região de Huila, Colômbia, por Espectroscopia NIR Utilizando Algoritmo Random Forest**.
 
 O projeto classifica amostras de café torrado e moído nas classes sensoriais `muito_bom` e `excelente` a partir de espectros FT-NIR.
 
