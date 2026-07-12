@@ -291,8 +291,6 @@ O repositório mantém uma única configuração executável: [`recipes/01.yaml`
 | Modelos finais | 10 |
 | Modelos na validação reservada | 4, selecionados por `cv_score` |
 
-O TCC não informa numericamente a quantidade de tentativas, o número de folds, `C`, limiar, tolerância ou iterações do LASSO. Esses valores estão identificados no YAML como *defaults* operacionais históricos, e não como valores extraídos do texto.
-
 ## Ambiente e dependências
 
 [`pyproject.toml`](pyproject.toml) é a fonte das dependências diretas e [`uv.lock`](uv.lock) fixa toda a resolução para instalações reproduzíveis. O arquivo [`.python-version`](.python-version) orienta o `uv` a usar Python 3.12; não é necessário criar ou ativar um ambiente virtual manualmente.
@@ -304,22 +302,20 @@ uv lock --check
 uv sync --locked
 ```
 
-Ao adicionar ou remover uma biblioteca, use `uv add <pacote>` ou `uv remove <pacote>` para manter `pyproject.toml` e `uv.lock` consistentes.
-
 O protocolo experimental do TCC utilizou cinco execuções sem *seed*. Caso queira repetir esse protocolo, preserve as saídas de cada execução antes de iniciar a seguinte, pois os mesmos caminhos são reutilizados.
 
 ## Saídas de uma execução
 
 | Caminho | Conteúdo |
 |---|---|
-| `data/raw_split/` | Espectros e classes de treinamento/validação |
-| `data/processed/` | Espectros `SG_1D+MeanCentering` |
-| `data/lasso_features_*.xlsx` | Máscaras de comprimentos de onda do LASSO reajustado em todo o treino para cada versão espectral |
-| `plots/` | Gráficos dos espectros |
-| `models/` | Dez pipelines treinadas em formato `.joblib` |
-| `resultados_bayesian_search_treinamento.csv` | Ranking por validação cruzada e métricas de treinamento |
-| `resultados_validacao_final.csv` | Métricas dos quatro modelos no conjunto reservado, preservando `cv_rank`, `cv_score` e ranking final |
-| `confusion_matrices/` | Quatro matrizes de confusão normalizadas |
+| `data/raw_split/` | Planilhas com as matrizes espectrais e os rótulos sensoriais dos conjuntos de treinamento e validação externa |
+| `data/processed/` | Matrizes espectrais após filtragem Savitzky–Golay de primeira derivada e centralização pela média, separadas por partição |
+| `data/lasso_features_*.xlsx` | Indicadores binários das variáveis espectrais selecionadas por regressão logística com regularização L1, ajustada no conjunto completo de treinamento para cada representação espectral |
+| `plots/` | Visualizações dos espectros brutos e pré-processados, com codificação por pontuação sensorial e por classe |
+| `models/` | Dez pipelines serializados em Joblib, compostos pelo seletor de variáveis L1 e pelo classificador Random Forest |
+| `resultados_bayesian_search_treinamento.csv` | Ranking dos modelos candidatos por `cv_score`, com hiperparâmetros, número de variáveis selecionadas e métricas de ajuste no treinamento |
+| `resultados_validacao_final.csv` | Métricas preditivas dos quatro modelos selecionados por validação cruzada e avaliados no conjunto de validação externa, incluindo `cv_rank`, `cv_score` e ranking final |
+| `confusion_matrices/` | Matrizes de confusão normalizadas por classe real para os quatro modelos avaliados na validação externa |
 
 ## Resultado de referência
 
