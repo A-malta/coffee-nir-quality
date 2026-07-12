@@ -1,22 +1,17 @@
-# Ambiente virtual
+# Ambientes virtuais
 venv/
+.venv/
 .env/
 cnq/
 
-# Saídas e resultados
+# Cache e arquivos temporários
 __pycache__/
-output/
-confusion_matrices_1/
-confusion_matrices
-plots/
-resultados_bayesian_search_treinamento.csv
-resultados_validacao_final.csv
-# Arquivos temporários e de cache
+*.py[cod]
 *.log
 *.tmp
 *.cache
 
-# Arquivos de configuração do sistema e IDEs
+# IDEs e sistema operacional
 .vscode/
 .idea/
 *.code-workspace
@@ -26,9 +21,24 @@ resultados_validacao_final.csv
 build/
 dist/
 
-# Dados e Modelos (Ignorados para não pesar o repo)
-/data/
+# Saídas geradas por uma nova execução
+/data/raw_split/
+/data/processed/
+/data/lasso_features_*.xlsx
 /models/
-*.csv
-*.xlsx
-data/
+/plots/
+/confusion_matrices/
+/confusion_matrices_1/
+/output/
+/resultados_bayesian_search_treinamento.csv
+/resultados_validacao_final.csv
+*.joblib
+
+# Cópias locais completas; o recorte publicável está em resultados_tcc/
+/resultados/
+/resultados da pipeline/
+/pipeline/
+
+# Materiais locais que não fazem parte do código/dados publicados
+/TCC_*.pdf
+*.zip

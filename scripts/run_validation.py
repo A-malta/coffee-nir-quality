@@ -5,6 +5,7 @@ matplotlib.use("Agg")
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import yaml
 from sklearn.metrics import confusion_matrix
 
 from src.config import (
@@ -34,9 +35,27 @@ def preprocess_from_model(path):
     return name.split(MARKER, 1)[0]
 
 
-def model_files():
+def validation_model_limit(recipe_file):
+    with recipe_file.open(encoding="utf-8") as f:
+        recipe = yaml.safe_load(f)
+    return int(recipe["model"]["search"]["validate_top_models"])
+
+
+def validation_candidates(limit):
     results = pd.read_csv(BAYESIAN_SEARCH_RESULTS_FILE)
-    return [MODELS_DIR / name for name in results["model_file"].dropna()]
+    selected = (
+        results.dropna(subset=["model_file", "cv_score", "rank"])
+        .sort_values(["cv_score", "rank"], ascending=[False, True])
+        .head(limit)
+    )
+    return [
+        {
+            "path": MODELS_DIR / row.model_file,
+            "cv_rank": int(row.rank),
+            "cv_score": float(row.cv_score),
+        }
+        for row in selected.itertuples(index=False)
+    ]
 
 
 def save_csv(results, path):
@@ -69,7 +88,8 @@ def plot_confusion_matrix(path, y_true, y_pred, final_rank):
     plt.close()
 
 
-def evaluate(path, datasets):
+def evaluate(candidate, datasets):
+    path = candidate["path"]
     preprocess = preprocess_from_model(path)
 
     if preprocess not in datasets:
@@ -84,6 +104,8 @@ def evaluate(path, datasets):
     return {
         "model": path.name,
         "preprocess_step": preprocess,
+        "cv_rank": candidate["cv_rank"],
+        "cv_score": candidate["cv_score"],
         **{f"val_{k}": v for k, v in metrics.items()},
     }
 
@@ -125,10 +147,21 @@ def plot_validation_confusion_matrices(validation_results, datasets):
         plot_confusion_matrix(path, y, model.predict(X), final_rank)
 
 
-def run_validation():
+def clear_generated_confusion_matrices():
+    if not CONFUSION_MATRICES_DIR.exists():
+        return
+
+    for path in CONFUSION_MATRICES_DIR.glob("rank-final-*_rf_*_cm.png"):
+        if path.is_file():
+            path.unlink()
+
+
+def run_validation(recipe_file):
+    clear_generated_confusion_matrices()
     CONFUSION_MATRICES_DIR.mkdir(exist_ok=True)
     datasets = {}
-    results = [evaluate(path, datasets) for path in model_files()]
+    limit = validation_model_limit(recipe_file)
+    results = [evaluate(candidate, datasets) for candidate in validation_candidates(limit)]
     validation_results = add_final_rank(sort_results(pd.DataFrame(results)))
 
     save_csv(validation_results, VALIDATION_RESULTS_FILE)

@@ -25,7 +25,7 @@ def main():
         ("Pré-processamento", run_preprocessing),
         ("Visualização de Espectros", lambda: run_plot(args.spectra_file, args.quality_file)),
         ("Busca Bayesiana", lambda: run_bayesian_search(args.recipe)),
-        ("Validação Final", run_validation),
+        ("Validação Final", lambda: run_validation(args.recipe)),
     ]
     for name, func in tqdm(steps, desc="Pipeline", unit="etapa"):
         tqdm.write(f"> {name}")

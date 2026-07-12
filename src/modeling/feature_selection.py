@@ -12,25 +12,38 @@ class LassoFeatureSelector(BaseEstimator, TransformerMixin):
         threshold,
         max_iter,
         tol,
+        standardize=True,
+        penalty="l1",
+        solver="saga",
     ):
         self.C = C
         self.threshold = threshold
         self.max_iter = max_iter
         self.tol = tol
+        self.standardize = standardize
+        self.penalty = penalty
+        self.solver = solver
 
     def fit(self, X, y):
+        if self.penalty != "l1":
+            raise ValueError("O seletor do TCC aceita somente penalização L1.")
+
         X_array = np.asarray(X, dtype=np.float32)
-        self.scaler_ = StandardScaler()
-        X_scaled = self.scaler_.fit_transform(X_array)
+        if self.standardize:
+            self.scaler_ = StandardScaler()
+            X_selection = self.scaler_.fit_transform(X_array)
+        else:
+            self.scaler_ = None
+            X_selection = X_array
 
         self.estimator_ = LogisticRegression(
             C=self.C,
             l1_ratio=1.0,
-            solver="saga",
+            solver=self.solver,
             max_iter=self.max_iter,
             tol=self.tol,
         )
-        self.estimator_.fit(X_scaled, y)
+        self.estimator_.fit(X_selection, y)
 
         coefficients = np.abs(self.estimator_.coef_)
         importances = coefficients.max(axis=0) if coefficients.ndim == 2 else coefficients

@@ -3,6 +3,7 @@ import numpy as np
 import optuna
 import pandas as pd
 import yaml
+from sklearn.base import clone
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
@@ -112,11 +113,17 @@ def save_feature_selection(preprocess, selection):
 
 def lasso_selector(search_config):
     config = search_config["feature_selection"]["lasso"]
+    if not config.get("enabled", False):
+        raise ValueError("A recipe do TCC exige seleção de variáveis LASSO habilitada.")
+
     return LassoFeatureSelector(
         C=float(config["C"]),
         threshold=float(config["threshold"]),
         max_iter=int(config["max_iter"]),
         tol=float(config["tol"]),
+        standardize=bool(config.get("standardize", True)),
+        penalty=config.get("penalty", "l1"),
+        solver=config.get("solver", "saga"),
     )
 
 
@@ -144,39 +151,39 @@ def selected_feature_count(model):
     return int(selector.n_selected_features_)
 
 
-def fit_lasso(selector, X_train, y_train):
-    selector.fit(X_train, y_train)
-    return selector.transform(X_train)
+def modeling_pipeline(params, search_config):
+    selector = lasso_selector(search_config)
+    rf = RandomForestClassifier(**params, n_jobs=-1)
+    return make_model(selector, rf)
 
 
 def fit_final_model(params, selector, X_train, y_train):
     X_selected = selector.transform(X_train)
-
     rf = RandomForestClassifier(**params, n_jobs=-1)
     rf.fit(X_selected, y_train)
-
     return make_model(selector, rf)
 
 
-def cross_validation_score(model, X, y, cv, scoring):
+def cross_validation_score(model, X, y, cv_splits, scoring):
+    X_array = np.asarray(X, dtype=np.float32)
     scores = []
-    for train_idx, test_idx in cv.split(X, y):
-        model.fit(X[train_idx], y.iloc[train_idx])
-        y_pred = model.predict(X[test_idx])
+    for train_idx, test_idx in cv_splits:
+        fold_model = clone(model)
+        fold_model.fit(X_array[train_idx], y.iloc[train_idx])
+        y_pred = fold_model.predict(X_array[test_idx])
         scores.append(score_predictions(y.iloc[test_idx], y_pred, scoring))
 
     return float(np.mean(scores))
 
 
-def prepare_search_data(X_train, y_train, search_config):
+def prepare_cross_validation_splits(X, y, search_config):
     cv_folds = int(search_config["cv_folds"])
-    search_selector = lasso_selector(search_config)
-    X_train_selected = fit_lasso(search_selector, X_train, y_train)
-    cv = StratifiedKFold(n_splits=cv_folds, shuffle=True)
-    return search_selector, X_train_selected, cv
+    cv_shuffle = bool(search_config.get("cv_shuffle", True))
+    cv = StratifiedKFold(n_splits=cv_folds, shuffle=cv_shuffle)
+    return [(train_idx.copy(), test_idx.copy()) for train_idx, test_idx in cv.split(X, y)]
 
 
-def run_optuna_search(preprocess, X_train_selected, y_train, cv, search_config):
+def run_optuna_search(preprocess, X_train, y_train, cv_splits, search_config):
     param_space = search_config["space"]
     scoring = search_config["scoring"]
     n_trials = int(search_config["n_trials"])
@@ -186,8 +193,8 @@ def run_optuna_search(preprocess, X_train_selected, y_train, cv, search_config):
 
     def objective(trial):
         params = suggest_params(trial, param_space)
-        model = RandomForestClassifier(**params, n_jobs=-1)
-        return cross_validation_score(model, X_train_selected, y_train, cv, scoring)
+        model = modeling_pipeline(params, search_config)
+        return cross_validation_score(model, X_train, y_train, cv_splits, scoring)
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
     with tqdm(total=n_trials, desc=f"  Bayesian Search ({preprocess})", unit="trial", leave=False) as pbar:
@@ -217,11 +224,11 @@ def save_top_models(candidates, search_config):
     for rank, candidate in enumerate(sorted_candidates(candidates)[:save_top_models], start=1):
         preprocess = candidate["preprocess"]
         trial = candidate["trial"]
-        search_selector = candidate["search_selector"]
+        final_selector = candidate["final_selector"]
         X_train = candidate["X_train"]
         y_train = candidate["y_train"]
         params = {name: trial.params[name] for name in param_names}
-        model = fit_final_model(params, search_selector, X_train, y_train)
+        model = fit_final_model(params, final_selector, X_train, y_train)
 
         metrics = evaluate_model(y_train, model.predict(X_train))
         path = model_path(preprocess, params, rank)
@@ -232,18 +239,17 @@ def save_top_models(candidates, search_config):
     return saved_results
 
 
-def optimize_preprocess(preprocess, search_config):
-    X_train, y_train = load_modeling_dataset("training", preprocess)
-    search_selector, X_train_selected, cv = prepare_search_data(X_train, y_train, search_config)
-    selection = feature_selection_table(X_train.columns, search_selector)
+def optimize_preprocess(preprocess, X_train, y_train, cv_splits, search_config):
+    study = run_optuna_search(preprocess, X_train, y_train, cv_splits, search_config)
+    final_selector = lasso_selector(search_config).fit(X_train, y_train)
+    selection = feature_selection_table(X_train.columns, final_selector)
     save_feature_selection(preprocess, selection)
-    study = run_optuna_search(preprocess, X_train_selected, y_train, cv, search_config)
     return [
         {
             "preprocess": preprocess,
             "study": study,
             "trial": trial,
-            "search_selector": search_selector,
+            "final_selector": final_selector,
             "X_train": X_train,
             "y_train": y_train,
         }
@@ -251,15 +257,41 @@ def optimize_preprocess(preprocess, search_config):
     ]
 
 
+def clear_generated_models():
+    if not MODELS_DIR.exists():
+        return
+
+    for path in MODELS_DIR.glob("rf_*_rank-*.joblib"):
+        if path.is_file():
+            path.unlink()
+
+
 def run_bayesian_search(recipe_file):
     search_config = load_recipe(recipe_file)
     preprocess_files = [RAW_PREPROCESS_NAME, PREPROCESS_NAME]
+    training_datasets = {
+        preprocess: load_modeling_dataset("training", preprocess)
+        for preprocess in preprocess_files
+    }
 
+    reference_X, reference_y = training_datasets[preprocess_files[0]]
+    for preprocess, (X_train, y_train) in training_datasets.items():
+        if len(X_train) != len(reference_X) or not np.array_equal(np.asarray(y_train), np.asarray(reference_y)):
+            raise ValueError(f"Dados de treinamento desalinhados para o pré-processamento '{preprocess}'.")
+
+    cv_splits = prepare_cross_validation_splits(reference_X, reference_y, search_config)
+
+    clear_generated_models()
     MODELS_DIR.mkdir(exist_ok=True)
     candidates = [
         candidate
         for preprocess in preprocess_files
-        for candidate in optimize_preprocess(preprocess, search_config)
+        for candidate in optimize_preprocess(
+            preprocess,
+            *training_datasets[preprocess],
+            cv_splits,
+            search_config,
+        )
     ]
     results = save_top_models(candidates, search_config)
 

@@ -33,7 +33,12 @@ def load_raw_spectra(path):
 
 
 def load_quality_table(path):
-    return pd.read_excel(path, sheet_name=QUALITY_SHEET)
+    quality = pd.read_excel(path, sheet_name=QUALITY_SHEET)
+    if CLASS_TARGET_COLUMN in quality:
+        quality[CLASS_TARGET_COLUMN] = quality[CLASS_TARGET_COLUMN].map(
+            lambda value: value.strip() if isinstance(value, str) else value
+        )
+    return quality
 
 
 def aligned_quality_scores(quality, sample_ids):

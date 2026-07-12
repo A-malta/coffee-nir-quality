@@ -1,0 +1,88 @@
+metadata:
+  source: "TCC Aline Malta, seções 4.5 e 4.6"
+  repetitions: 5
+  random_seed: null
+  operational_defaults_not_specified_in_tcc:
+    - model.search.n_trials
+    - model.search.cv_folds
+    - model.search.cv_shuffle
+    - model.search.feature_selection.lasso.C
+    - model.search.feature_selection.lasso.threshold
+    - model.search.feature_selection.lasso.max_iter
+    - model.search.feature_selection.lasso.tol
+    - model.search.space.max_features.distribution
+
+model:
+  type: random_forest
+
+  preliminary_grid_search:
+    status: documented_prior_stage
+    executable: false
+    reason: "O TCC informa os limites, mas não os valores discretos da grade."
+    space:
+      n_estimators:
+        low: 300
+        high: 1000
+      max_depth:
+        low: 6
+        high: 20
+      min_samples_split:
+        low: 2
+        high: 20
+      min_samples_leaf:
+        low: 1
+        high: 10
+      max_features:
+        low: 0.001
+        high: 1.0
+      bootstrap: [true, false]
+
+  search:
+    algorithm: optuna
+    sampler: tpe
+
+    # Defaults operacionais históricos; não são valores declarados no TCC.
+    n_trials: 1000
+    cv_folds: 5
+    cv_shuffle: true
+
+    scoring: min_class_recall
+    direction: maximize
+    save_top_models: 10
+    validate_top_models: 4
+
+    space:
+      n_estimators:
+        low: 350
+        high: 450
+        step: 50
+      max_depth:
+        low: 14
+        high: 15
+        step: 1
+      min_samples_split:
+        low: 10
+        high: 19
+        step: 1
+      min_samples_leaf:
+        low: 1
+        high: 2
+        step: 1
+      max_features:
+        low: 0.20
+        high: 0.35
+        distribution: uniform
+      bootstrap: [true, false]
+
+    feature_selection:
+      lasso:
+        enabled: true
+        standardize: true
+        penalty: l1
+        solver: saga
+
+        # Defaults operacionais históricos; não são valores declarados no TCC.
+        C: 1.0
+        threshold: 0.00000001
+        max_iter: 5000
+        tol: 0.001
