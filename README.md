@@ -128,8 +128,6 @@ flowchart TD
 
 Os dados derivam do conjunto *Fourier Transform Near Infrared (FT-NIR) spectra and sensory scores in green and roasted specialty coffee for machine learning-based quality monitoring*, versão 3, de Gentil Andres Collazos-Escobar, Ever M. Morales-Angulo, Andrés Felipe Bahamón Monje e Nelson Gutierrez Guzman ([Mendeley Data, DOI 10.17632/nz2fr76trm.3](https://doi.org/10.17632/nz2fr76trm.3)). O conjunto é distribuído sob a licença [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
-> **Nota de reprodutibilidade:** a planilha versionada contém 114 espectros `muito_bom` e 78 `excelente`. O texto e a Tabela 1 do TCC informam 111 e 81, respectivamente. A divisão e os resultados de referência correspondem aos dados versionados: 153 espectros de treinamento e 39 de validação, enquanto o texto do TCC informa 154 e 38.
-
 ## Partes principais
 
 ### 1. Divisão em treinamento e validação
