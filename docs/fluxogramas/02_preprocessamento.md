@@ -1,26 +1,49 @@
-# Figura 5 - Pré-processamento espectral
+```mermaid
+---
+config:
+  theme: neutral
+  look: classic
+  flowchart:
+    curve: basis
+    nodeSpacing: 50
+    rankSpacing: 55
+---
+flowchart TB
+    subgraph PIPE["Pipeline de pré-processamento"]
+        direction TB
+        SG[Savitzky-Golay<br/>janela=15, ord=2]
+        D1[1ª Derivada espectral]
+        MC[Mean Centering]
 
-Reprodução da Figura 5 do TCC (página 30), preservando o conteúdo visual original.
+        SG --> D1
+        D1 --> MC
+    end
 
-![Fluxograma de execução dos pré-processamentos espectrais.](assets/figura-05-preprocessamento-espectral.png)
+    A([Início]) --> B[/Dados brutos - treinamento/]
+    A --> C[/Dados brutos - validação/]
 
-**Figura 5 – Fluxograma de execução dos pré-processamentos espectrais.**
+    B --> SG
+    C --> SG
 
-Fonte: Elaborado pela autora.
+    B -. sem transformação .-> D[/Dados brutos - treinamento/]
+    C -. sem transformação .-> E[/Dados brutos - validação/]
 
-## Procedimento descrito no TCC
+    MC --> F[/Dados de treinamento<br/>SG_1D+MeanCentering/]
+    MC --> G[/Dados de validação<br/>SG_1D+MeanCentering/]
 
-O pré-processamento foi aplicado sequencialmente:
+    D --> H([Fim])
+    E --> H
+    F --> H
+    G --> H
 
-1. filtro de Savitzky-Golay, com janela 15 e polinômio de grau 2;
-2. primeira derivada espectral;
-3. *mean centering*, subtraindo de cada comprimento de onda a média do respectivo conjunto.
+    classDef terminador fill:#E8F6EF,stroke:#62B58F,color:#263238
+    classDef dados fill:#EAF2FF,stroke:#6C91C2,color:#263238
+    classDef processo fill:#FFF3D6,stroke:#D4A83F,color:#263238
 
-Treinamento e validação foram processados separadamente para preservar a independência do conjunto de validação. Os espectros sem transformação também foram mantidos para comparação com a versão `SG_1D+MeanCentering`.
+    class A,H terminador
+    class B,C,D,E,F,G dados
+    class SG,D1,MC processo
 
-## Conjuntos resultantes
-
-- dados brutos de treinamento;
-- dados brutos de validação;
-- dados de treinamento `SG_1D+MeanCentering`;
-- dados de validação `SG_1D+MeanCentering`.
+    style PIPE fill:#F7F7F7,stroke:#D6D6D6,color:#263238
+    linkStyle default stroke:#7AA695,stroke-width:2px
+```

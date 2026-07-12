@@ -1,49 +1,47 @@
-# Figura 10 - Seleção de variáveis, treinamento e busca de hiperparâmetros
+```mermaid
+---
+config:
+  theme: neutral
+  look: classic
+  flowchart:
+    curve: basis
+    nodeSpacing: 42
+    rankSpacing: 50
+---
+flowchart TD
+    A([Início da etapa]) --> B[/Dados de treinamento<br/>espectros e classes/]
+    B --> C[[Grid Search:<br/>Exploração do espaço de<br/>hiperparâmetros]]
+    C --> D[[Otimização Bayesiana<br/>Algoritmo Optuna]]
+    D --> E{Validação Cruzada<br/>Stratified K-Fold}
 
-Reprodução da Figura 10 do TCC (página 34), preservando o conteúdo visual original.
+    E -- "Repetição por fold" --> F[/Subconjunto de Validação/]
+    E -- "Repetição por fold" --> G[/Subconjunto de Treinamento/]
 
-![Esquema da seleção de variáveis por LASSO e busca de hiperparâmetros.](assets/figura-10-selecao-variaveis-hiperparametros.png)
+    G --> H[[Seleção de Variáveis<br/>Regressão Logística Lasso L1]]
+    H --> I[[Treinamento do Classificador<br/>Random Forest]]
 
-**Figura 10 – Esquema da seleção de variáveis por LASSO e busca de hiperparâmetros.**
+    F --> J[[Avaliação do Desempenho]]
+    I --> J
 
-Fonte: Elaborado pela autora.
+    J --> K[/Métrica de Otimização:<br/>minimum class recall/]
+    K --> L[[Cálculo do CV Score:<br/>Média entre os folds]]
+    L --> M[/Seleção das melhores<br/>combinações de<br/>hiperparâmetros/]
 
-## Procedimento descrito no TCC
+    M --> N[[Seleção de Variáveis Final<br/>Ajuste com todo o conjunto<br/>de treinamento]]
+    B --> N
+    N --> O[[Artefatos finais:<br/>modelo + features]]
+    O --> P[/Resultados de validação/]
+    P --> Q([Fim da etapa])
 
-1. A seleção de variáveis foi realizada por regressão logística com penalização L1 (Lasso), usando o *solver* `saga`.
-2. A importância de cada comprimento de onda foi obtida pelo valor absoluto do coeficiente, mantendo-se as variáveis acima do limiar definido.
-3. O classificador utilizado foi o Random Forest.
-4. Antes da otimização bayesiana, uma busca em grade explorou um espaço amplo de hiperparâmetros.
-5. A otimização bayesiana foi realizada com Optuna e o algoritmo Tree-structured Parzen Estimator (TPE).
-6. Cada combinação foi avaliada por validação cruzada estratificada (*Stratified K-Fold*), usando como função objetivo o *minimum class recall*.
-7. A seleção de variáveis e o Random Forest foram ajustados novamente dentro de cada *fold*, apenas com o subconjunto de treinamento correspondente.
-8. O *cross-validation score* foi calculado pela média do *minimum class recall* entre os *folds*.
-9. As 10 melhores combinações foram usadas para treinar os modelos finais; a seleção de variáveis foi então reajustada com todo o conjunto de treinamento.
+    classDef terminador fill:#E8F6EF,stroke:#62B58F,color:#263238
+    classDef dados fill:#EAF2FF,stroke:#6C91C2,color:#263238
+    classDef processo fill:#FFF3D6,stroke:#D4A83F,color:#263238
+    classDef decisao fill:#F4E5F7,stroke:#A363B3,color:#263238
 
-## Tabela 2 - Intervalos avaliados no Grid Search
+    class A,Q terminador
+    class B,F,G,K,M,P dados
+    class C,D,H,I,J,L,N,O processo
+    class E decisao
 
-| Hiperparâmetro | Símbolo | Intervalo avaliado |
-|---|---|---:|
-| Número de árvores | `n_estimators` | 300–1000 |
-| Profundidade máxima | `max_depth` | 6–20 |
-| Mínimo de amostras para divisão | `min_samples_split` | 2–20 |
-| Mínimo de amostras por folha | `min_samples_leaf` | 1–10 |
-| Fração de atributos | `max_features` | 0,001–1 |
-| Bootstrap | `bootstrap` | True, False |
-
-Fonte: Tabela 2 do TCC, página 35.
-
-## Tabela 3 - Intervalos usados na Otimização Bayesiana
-
-| Hiperparâmetro | Símbolo | Intervalo avaliado |
-|---|---|---:|
-| Número de árvores | `n_estimators` | 350–450 (passo = 50) |
-| Profundidade máxima | `max_depth` | 14–15 (passo = 1) |
-| Mínimo de amostras para divisão | `min_samples_split` | 10–19 (passo = 1) |
-| Mínimo de amostras por folha | `min_samples_leaf` | 1–2 (passo = 1) |
-| Fração de atributos | `max_features` | 0,20–0,35 |
-| Bootstrap | `bootstrap` | True, False |
-
-Fonte: Tabela 3 do TCC, página 35.
-
-> Nota de fidelidade: o PDF não informa o número de tentativas do Optuna, a quantidade de *folds*, o valor do limiar do Lasso, `C`, `max_iter` ou `tol`. Por isso, esses valores não são apresentados aqui como parte do texto do TCC.
+    linkStyle default stroke:#7AA695,stroke-width:2px
+```

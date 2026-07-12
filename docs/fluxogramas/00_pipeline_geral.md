@@ -1,31 +1,43 @@
-# Figura 3 - Pipeline metodológica geral
+```mermaid
+---
+config:
+  theme: neutral
+  look: classic
+  flowchart:
+    curve: basis
+    nodeSpacing: 50
+    rankSpacing: 58
+---
+flowchart TD
+    A([Início da pipeline]) --> B[/Dados iniciais<br/>espectros NIR e qualidade<br/>sensorial/]
+    B --> C[[Divisão treino/validação<br/>dos dados]]
 
-Reprodução da Figura 3 do TCC (página 27), preservando o conteúdo visual original.
+    C --> D[/Conjunto de treinamento/]
+    C --> E[/Conjunto de validação/]
 
-![Esquema geral da pipeline metodológica utilizada para classificação de cafés especiais a partir de espectros NIR.](assets/figura-03-pipeline-geral.png)
+    D --> F[[Savitzky-Golay]]
+    E --> F
+    F --> G[[1ª derivada]]
+    G --> H[[Mean Centering]]
 
-**Figura 3 – Esquema geral da pipeline metodológica utilizada para classificação de cafés especiais a partir de espectros NIR.**
+    H --> I[/Conjunto de treinamento<br/>tratado/]
+    H --> J[/Conjunto de validação tratado/]
 
-Fonte: Elaborado pela autora.
+    I --> K[[Otimização de<br/>hiperparâmetros<br/>e treinamento dos modelos]]
+    K --> L[/Modelos candidatos treinados/]
 
-## Descrição metodológica
+    L --> M[[Avaliação final do modelo]]
+    J --> M
+    M --> N[/Resultados finais<br/>métricas preditivas, matrizes<br/>de confusão<br/>e comparação entre modelos/]
+    N --> O([Fim da pipeline])
 
-A pipeline foi implementada em Python e executada de forma contínua. O trabalho descreve cinco etapas principais:
+    classDef terminador fill:#E8F6EF,stroke:#62B58F,color:#263238
+    classDef dados fill:#EAF2FF,stroke:#6C91C2,color:#263238
+    classDef processo fill:#FFF3D6,stroke:#D4A83F,color:#263238
 
-1. carregamento e divisão dos dados;
-2. pré-processamento espectral;
-3. visualização exploratória;
-4. treinamento com seleção de variáveis e busca bayesiana de hiperparâmetros;
-5. validação final.
+    class A,O terminador
+    class B,D,E,I,J,L,N dados
+    class C,F,G,H,K,M processo
 
-A esteira foi executada cinco vezes, sem definição de *seed* para reprodutibilidade.
-
-## Etapas detalhadas
-
-- [01 - Divisão em treinamento e validação](01_divisao_dados.md)
-- [02 - Pré-processamento espectral](02_preprocessamento.md)
-- [03 - Visualização dos espectros](03_visualizacao_espectros.md)
-- [04 - Seleção de variáveis, treinamento e busca de hiperparâmetros](04_grid_search.md)
-- [05 - Validação final](05_validacao_final.md)
-
-> Nota de fidelidade: a visualização exploratória é descrita como uma das cinco etapas no texto, embora não apareça como um bloco independente na Figura 3.
+    linkStyle default stroke:#7AA695,stroke-width:2px
+```
